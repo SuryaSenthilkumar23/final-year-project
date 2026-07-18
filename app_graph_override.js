@@ -30,14 +30,19 @@
       nodes.push({ id: `entity-${i}`, label: e.value || e.name || e.type || 'Entity', dx, dy, raw: e, type: 'entity' });
     });
 
-    // draw edges from root to entities
-    ctx.strokeStyle = 'rgba(56,189,248,.5)'; ctx.lineWidth = 2;
-    nodes.slice(1).forEach(n => { ctx.beginPath(); ctx.moveTo(nodes[0].dx, nodes[0].dy); ctx.lineTo(n.dx, n.dy); ctx.stroke(); });
+    // draw edges from root to entities with style based on priority
+    nodes.slice(1).forEach(n => {
+      const pr = (n.raw && n.raw.priority || 'low').toLowerCase();
+      if(pr==='high'){ ctx.strokeStyle = 'rgba(239,68,68,0.9)'; ctx.lineWidth = 3; ctx.setLineDash([]); }
+      else if(pr==='medium'){ ctx.strokeStyle = 'rgba(245,158,11,0.9)'; ctx.lineWidth = 2.5; ctx.setLineDash([6,6]); }
+      else { ctx.strokeStyle = 'rgba(56,189,248,0.45)'; ctx.lineWidth = 2; ctx.setLineDash([]); }
+      ctx.beginPath(); ctx.moveTo(nodes[0].dx, nodes[0].dy); ctx.lineTo(n.dx, n.dy); ctx.stroke(); ctx.setLineDash([]);
+    });
 
-    // draw nodes
+    // draw nodes and small annotations (right-side) like counts or evidence source
     window.hits = [];
     nodes.forEach(n => {
-      const r = n.type === 'investigation' ? 36 : 22;
+      const r = n.type === 'investigation' ? 38 : 22;
       const col = n.type === 'investigation' ? '#0ea5a4' : '#38bdf8';
       ctx.beginPath(); ctx.arc(n.dx, n.dy, r, 0, Math.PI*2); ctx.fillStyle = 'rgba(56,189,248,.06)'; ctx.fill();
       ctx.beginPath(); ctx.arc(n.dx, n.dy, r, 0, Math.PI*2); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
@@ -45,6 +50,25 @@
       const label = (String(n.label||'')).replace(/\n/g,' ');
       const short = label.length>24?label.slice(0,21)+'...':label;
       ctx.fillText(short, n.dx, n.dy + r + 12);
+
+      // annotation: derive simple summary lines from entity raw data
+      if(n.type === 'entity' && n.raw){
+        const lines = [];
+        if(n.raw.frequency) lines.push(`${n.raw.frequency} occurrences`);
+        if(n.raw.evidenceSource) lines.push(n.raw.evidenceSource);
+        if(n.raw.evidenceDetails && typeof n.raw.evidenceDetails === 'object'){
+          const detail = n.raw.evidenceDetails;
+          if(detail.calls) lines.push(`${detail.calls} calls`);
+          if(detail.messages) lines.push(`${detail.messages} messages`);
+          if(detail.url) lines.push('Suspicious URL');
+        }
+        if(lines.length){
+          ctx.fillStyle = '#9fb7d9'; ctx.font = '500 11px Inter'; ctx.textAlign = 'left';
+          const ax = n.dx + r + 10, ay = n.dy - (lines.length-1)*10;
+          lines.forEach((ln, idx)=> ctx.fillText(ln, ax, ay + idx*14));
+        }
+      }
+
       window.hits.push({ n, x: n.dx, y: n.dy, r });
     });
 
@@ -55,7 +79,11 @@
       if(!h){ if(t) t.style.display='none'; c.style.cursor='default'; return; }
       if(t){ t.style.display='block'; t.style.left = e.clientX + 14 + 'px'; t.style.top = e.clientY - 10 + 'px';
         const data = h.n.raw || {};
-        t.innerHTML = `<strong>${esc(h.n.label||'')}</strong><div style="font-size:12px;color:#cbd5e1;margin-top:6px;">${esc(data.type||data.evidenceSource||'')}</div>`; }
+        const more = [];
+        if(data.frequency) more.push(`${data.frequency} occurrences`);
+        if(data.evidenceSource) more.push(data.evidenceSource);
+        if(data.evidenceDetails && typeof data.evidenceDetails === 'object') more.push(Object.keys(data.evidenceDetails).join(', '));
+        t.innerHTML = `<strong>${esc(h.n.label||'')}</strong><div style="font-size:12px;color:#cbd5e1;margin-top:6px;">${esc(more.join(' • ')||'Entity' )}</div>`; }
       c.style.cursor = 'pointer';
     };
   };
