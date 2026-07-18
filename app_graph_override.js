@@ -97,7 +97,36 @@
   }
 
   // render function
+  // ensure the correlation page contains the canvas DOM (in case app.js rendered empty)
+  function ensureGraphDOM(){
+    if(!window.S || window.S.route !== 'correlation') return;
+    const existing = $id('#graphWrap');
+    if(existing) return;
+    const appContent = $id('#appContent');
+    if(!appContent) return;
+    // insert minimal graph stage markup used by the override
+    const frag = document.createElement('div');
+    frag.innerHTML = `
+      <section class="graph-stage">
+        <div class="graph-help">Use the mouse wheel to zoom and drag to pan.</div>
+        <div class="graph-canvas-wrap" id="graphWrap" style="margin-top:1rem;">
+          <canvas id="wecaGraphCanvas" class="weca-graph-canvas"></canvas>
+          <div id="graphNodeTooltip" class="graph-node-tooltip" style="display:none"></div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span><span>Person</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#14b8a6"></span><span>Phone</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span><span>Email</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span><span>Location</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span><span>Message</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#94a3b8"></span><span>Other</span></div>
+          </div>
+        </div>
+      </section>`;
+    appContent.insertAdjacentElement('beforeend', frag);
+  }
+
   window.graph = function(){
+    ensureGraphDOM();
     if(!window.S || window.S.route !== 'correlation') return;
     const wrap = $id('#graphWrap'); if(!wrap) return;
     const c = $id('#wecaGraphCanvas'); const t = $id('#graphNodeTooltip');
