@@ -6,6 +6,17 @@
 
   window.graph = function(){
     if(!window.S || window.S.route !== 'correlation') return;
+    // If entities or investigation are not loaded yet, fetch them from backend
+    if(!(Array.isArray(window.S.entities) && window.S.entities.length)){
+      const entUrl = (window.FORENSIAI_CONFIG?.apiBaseUrl||'') + ((window.FORENSIAI_CONFIG?.endpoints?.entities) || '/api/entities');
+      fetch(entUrl).then(r=>r.json()).then(j=>{ window.S.entities = j.entities||j||[]; window.graph(); }).catch(()=>{});
+      return;
+    }
+    if(!window.S.investigation){
+      const invUrl = (window.FORENSIAI_CONFIG?.apiBaseUrl||'') + ((window.FORENSIAI_CONFIG?.endpoints?.investigation) || '/api/investigation');
+      fetch(invUrl).then(r=>r.json()).then(j=>{ window.S.investigation = j; window.graph(); }).catch(()=>{});
+      return;
+    }
     const c = $id('#wecaGraphCanvas'), t = $id('#graphNodeTooltip'), w = $id('#graphWrap');
     if(!c || !w) return;
     const W = w.clientWidth, H = 420, d = window.devicePixelRatio || 1, ctx = c.getContext('2d');
