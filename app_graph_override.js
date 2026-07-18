@@ -6,15 +6,28 @@
 
   window.graph = function(){
     if(!window.S || window.S.route !== 'correlation') return;
+    const c = document.getElementById('wecaGraphCanvas');
+    if(!c) return;
+    const ctx = c.getContext('2d');
+    // show lightweight loading overlay while fetching data
+    if(window.S._graphLoading){
+      ctx.clearRect(0,0,c.width,c.height);
+      ctx.fillStyle = 'rgba(6,10,22,0.02)'; ctx.fillRect(0,0,c.width,c.height);
+      ctx.fillStyle = '#9fb7d9'; ctx.font = '600 18px Inter'; ctx.textAlign = 'center';
+      ctx.fillText('Loading graph…', c.width/2, c.height/2);
+      return;
+    }
     // If entities or investigation are not loaded yet, fetch them from backend
     if(!(Array.isArray(window.S.entities) && window.S.entities.length)){
+      window.S._graphLoading = true;
       const entUrl = (window.FORENSIAI_CONFIG?.apiBaseUrl||'') + ((window.FORENSIAI_CONFIG?.endpoints?.entities) || '/api/entities');
-      fetch(entUrl).then(r=>r.json()).then(j=>{ window.S.entities = j.entities||j||[]; window.graph(); }).catch(()=>{});
+      fetch(entUrl).then(r=>r.json()).then(j=>{ window.S.entities = j.entities||j||[]; window.S._graphLoading = false; window.graph(); }).catch(()=>{ window.S._graphLoading = false; window.graph(); });
       return;
     }
     if(!window.S.investigation){
+      window.S._graphLoading = true;
       const invUrl = (window.FORENSIAI_CONFIG?.apiBaseUrl||'') + ((window.FORENSIAI_CONFIG?.endpoints?.investigation) || '/api/investigation');
-      fetch(invUrl).then(r=>r.json()).then(j=>{ window.S.investigation = j; window.graph(); }).catch(()=>{});
+      fetch(invUrl).then(r=>r.json()).then(j=>{ window.S.investigation = j; window.S._graphLoading = false; window.graph(); }).catch(()=>{ window.S._graphLoading = false; window.graph(); });
       return;
     }
     const c = $id('#wecaGraphCanvas'), t = $id('#graphNodeTooltip'), w = $id('#graphWrap');
