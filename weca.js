@@ -1,7 +1,7 @@
-/**
+﻿/**
  * ============================================================
- * WECA.JS — Weighted Evidence Correlation Algorithm
- * ForensiAI-X | Phase 1 — Evidence Correlation Module
+ * WECA.JS â€” Weighted Evidence Correlation Algorithm
+ * ForensiAI-X | Phase 1 â€” Evidence Correlation Module
  * ============================================================
  *
  * Evidence Weights (per WECA specification):
@@ -12,19 +12,19 @@
  *   Suspicious URL     = 6
  *   Deleted Message    = 7
  *
- * Raw Score  = Σ (Weight × Frequency)
- * Normalised = (Raw / MAX_RAW) × 100   [clamped 0–100]
+ * Raw Score  = Î£ (Weight Ã— Frequency)
+ * Normalised = (Raw / MAX_RAW) Ã— 100   [clamped 0â€“100]
  *
  * Priority thresholds:
- *   High   ≥ 70
- *   Medium  40 – 69
+ *   High   â‰¥ 70
+ *   Medium  40 â€“ 69
  *   Low    < 40
  * ============================================================
  */
 
 'use strict';
 
-// ── Evidence Weight Constants ──────────────────────────────
+// â”€â”€ Evidence Weight Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const WECA_WEIGHTS = {
   calls:    2,
   messages: 3,
@@ -34,7 +34,7 @@ const WECA_WEIGHTS = {
   deleted:  7,
 };
 
-// ── Raw Forensic Entity Data ───────────────────────────────
+// â”€â”€ Raw Forensic Entity Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Realistic mock data extracted from Device_001.ufdr
 const RAW_ENTITIES = [
   {
@@ -345,7 +345,7 @@ const RAW_ENTITIES = [
   },
 ];
 
-// ── WECA Scoring Engine ────────────────────────────────────
+// â”€â”€ WECA Scoring Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Computes raw WECA score for one entity.
@@ -386,7 +386,7 @@ function getPriority(score) {
   return 'Low';
 }
 
-// ── Run WECA over all entities ─────────────────────────────
+// â”€â”€ Run WECA over all entities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const _scored = RAW_ENTITIES.map(entity => {
   const { raw, breakdown } = computeRawScore(entity.evidence);
@@ -416,7 +416,7 @@ const WECA_ENTITIES = _scored
   })
   .sort((a, b) => b.score - a.score);
 
-// ── WECA Summary ───────────────────────────────────────────
+// â”€â”€ WECA Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const WECA_SUMMARY = {
   total:   WECA_ENTITIES.length,
@@ -428,7 +428,7 @@ const WECA_SUMMARY = {
   maxRaw:  MAX_RAW,
 };
 
-// ── Correlation Graph Data (top-N entities + edges) ────────
+// â”€â”€ Correlation Graph Data (top-N entities + edges) â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Builds edge definitions between Device Owner and each top entity.
@@ -476,3 +476,4 @@ const WECA_GRAPH = {
 
 // Export for use in app.js
 window.WECA = { WECA_ENTITIES, WECA_SUMMARY, WECA_GRAPH, WECA_WEIGHTS };
+

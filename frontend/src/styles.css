@@ -1,0 +1,50 @@
+:root{--bg:#071026;--card:#0b1b2a;--muted:#94a3b8;--accent:#38bdf8;--accent-2:#818cf8;--text:#e2eaf4}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;color:var(--text);background:linear-gradient(180deg,#031122 0%,#071026 100%)}
+.app-shell{display:flex;min-height:100vh}
+.sidebar{width:220px;padding:20px;background:linear-gradient(180deg,#041026,#071026);box-shadow:inset 0 -1px 0 rgba(255,255,255,0.02)}
+.brand{font-weight:700;margin-bottom:18px}
+.nav{display:flex;flex-direction:column;gap:8px}
+.nav-item{display:block;padding:10px 12px;border-radius:8px;color:var(--muted);text-decoration:none}
+.nav-item.active{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#081023}
+.main-area{flex:1;padding:28px}
+.page h2{margin:0 0 12px}
+.cards{display:flex;gap:12px}
+.card{background:var(--card);padding:12px;border-radius:8px;min-width:180px}
+.card.small{min-width:120px}
+.skeleton{height:120px;background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.04));border-radius:8px}
+.data-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:8px;overflow:hidden}
+.data-table th, .data-table td{padding:10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.02)}
+.empty{padding:40px;background:var(--card);border-radius:8px}
+.upload-dropzone{padding:28px;border:2px dashed rgba(255,255,255,0.04);border-radius:8px;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;transition:background .2s,border-color .2s}
+.upload-dropzone.drag-active{background:rgba(56,189,248,0.08);border-color:rgba(56,189,248,0.5)}
+.upload-instructions{color:var(--text);font-size:1rem}
+.upload-meta{margin-top:12px;color:var(--muted)}
+.status-area{margin-top:14px}
+.progress-bar{height:8px;background:rgba(255,255,255,0.07);border-radius:999px;overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .4s ease}
+.status-block{padding:12px;border-radius:8px;margin-top:12px}
+.status-error{background:rgba(248,113,113,0.12);color:#ffb4b4}
+.status-success{background:rgba(134,239,172,0.12);color:#b7f5d0}
+.page-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.page-copy{margin:6px 0 0;color:var(--muted)}
+.empty-state{padding:24px;background:var(--card);border-radius:10px;color:var(--muted)}
+.button{display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;border:none;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#081023;font-weight:600;text-decoration:none;cursor:pointer}
+.button.secondary{background:rgba(255,255,255,0.08);color:var(--text)}
+.quick-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.graph-toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search-input{padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text);min-width:220px}
+.button-group{display:flex;gap:10px}
+.graph-canvas-wrap{background:var(--card);border-radius:16px;overflow:hidden}
+.graph-canvas{width:100%;height:420px;display:block}
+.graph-summary{margin-top:12px;color:var(--muted);display:flex;gap:16px}
+.table-wrap{background:var(--card);border-radius:12px;overflow:hidden}
+.card-panel{padding:18px}
+.cards.small{flex-wrap:wrap}
+.cards.small.wrap .card{flex:1 1 180px}
+.loader-block{display:inline-flex;align-items:center;gap:10px;padding:12px 0;color:var(--muted)}
+.loader-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.18);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section-grid{display:grid;gap:16px;margin-top:20px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.label{font-size:.9rem;color:var(--muted);margin-bottom:6px}
+.value{font-size:1.1rem;font-weight:700;color:var(--text)}
+.report-card{min-width:220px;display:flex;flex-direction:column;gap:10px}

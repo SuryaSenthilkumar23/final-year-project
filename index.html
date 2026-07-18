@@ -1,28 +1,36 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="ForensiAI-X: An Explainable AI Framework for Automated Evidence Correlation and Investigative Intelligence from UFDR Reports — Phase 1 Dashboard" />
-  <title>ForensiAI-X | Phase 1 Dashboard</title>
+  <meta name="description" content="ForensiAI-X digital forensics platform" />
+  <title>ForensiAI-X</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    window.FORENSIAI_CONFIG = window.FORENSIAI_CONFIG || {
+      apiBaseUrl: 'http://127.0.0.1:3000',
+      endpoints: {
+        investigation: '/api/investigation',
+        upload: '/api/upload',
+        artifacts: '/api/artifacts',
+        entities: '/api/entities',
+        graph: '/api/correlation-graph',
+        reports: '/api/reports'
+      }
+    };
+  </script>
   <script src="weca.js"></script>
 </head>
 <body>
-  <!-- Animated Background Particles -->
   <div class="bg-particles" aria-hidden="true">
-    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
-    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div><div class="particle"></div>
   </div>
 
   <div class="app-shell">
-
-    <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
       <div class="sidebar-brand">
         <div class="brand-icon" aria-hidden="true">
@@ -45,721 +53,62 @@
         </div>
       </div>
 
-      <div class="sidebar-section-label">NAVIGATION</div>
-      <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" id="nav-dashboard" aria-current="page">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          </span>
-          <span class="nav-label">Dashboard</span>
-          <span class="nav-badge active-badge">Active</span>
-        </a>
-        <a href="#" class="nav-item" id="nav-upload">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          </span>
-          <span class="nav-label">Upload UFDR</span>
-          <span class="nav-status done">✓</span>
-        </a>
-        <a href="#" class="nav-item" id="nav-artifacts">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          </span>
-          <span class="nav-label">Artifacts</span>
-          <span class="nav-status done">✓</span>
-        </a>
-        <a href="#" class="nav-item" id="nav-entities">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
-          </span>
-          <span class="nav-label">Entities</span>
-          <span class="nav-status done">✓</span>
-        </a>
-        <a href="#" class="nav-item" id="nav-correlation">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="6" y1="8" x2="6" y2="16"/><line x1="8" y1="18" x2="16" y2="18"/><line x1="18" y1="8" x2="18" y2="16"/></svg>
-          </span>
-          <span class="nav-label">Correlation Graph</span>
-          <span class="nav-status wip">⚡</span>
-        </a>
-        <a href="#" class="nav-item" id="nav-reports">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 017 7h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-          </span>
-          <span class="nav-label">Reports</span>
-          <span class="nav-status pending">○</span>
-        </a>
+      <div class="sidebar-section-label">Navigation</div>
+      <nav class="sidebar-nav" id="sidebarNav">
+        <a href="#/dashboard" class="nav-item" data-route="dashboard"><span class="nav-label">Dashboard</span></a>
+        <a href="#/upload" class="nav-item" data-route="upload"><span class="nav-label">Upload UFDR</span></a>
+        <a href="#/artifacts" class="nav-item" data-route="artifacts"><span class="nav-label">Artifacts</span></a>
+        <a href="#/entities" class="nav-item" data-route="entities"><span class="nav-label">Entities</span></a>
+        <a href="#/correlation" class="nav-item" data-route="correlation"><span class="nav-label">Correlation Graph</span></a>
+        <a href="#/reports" class="nav-item" data-route="reports"><span class="nav-label">Reports</span></a>
       </nav>
-
-      <div class="sidebar-section-label" style="margin-top:auto;">SYSTEM</div>
-      <div class="sidebar-system-info">
-        <div class="sys-row">
-          <span class="sys-label">Phase</span>
-          <span class="sys-value phase-badge">Phase I</span>
-        </div>
-        <div class="sys-row">
-          <span class="sys-label">Version</span>
-          <span class="sys-value mono">v0.4.5-alpha</span>
-        </div>
-        <div class="sys-row">
-          <span class="sys-label">Build</span>
-          <span class="sys-value mono">#2024-06</span>
-        </div>
-      </div>
     </aside>
 
-    <!-- ===== MAIN AREA ===== -->
     <div class="main-area">
-
-      <!-- TOP STATUS BAR -->
       <header class="topbar" role="banner">
         <div class="topbar-left">
           <button class="menu-toggle" id="menuToggle" aria-label="Toggle sidebar" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <div class="topbar-page-title">
-            <div class="phase-chip">PHASE 1</div>
-            <h1>Evidence Extraction &amp; Entity Analysis</h1>
+          <div>
+            <h1 class="app-title">ForensiAI-X</h1>
+            <p class="app-subtitle" id="investigationBanner">No Investigation Loaded</p>
           </div>
         </div>
         <div class="topbar-right">
-          <div class="status-chip" id="fileChip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span class="chip-label">UFDR Report:</span>
-            <span class="chip-value mono">Device_001.ufdr</span>
+          <div class="status-chip" id="headerStatusChip">
+            <span class="chip-label">Investigation</span>
+            <span class="chip-value" id="headerInvestigationName">No Investigation Loaded</span>
           </div>
-          <div class="status-chip success" id="statusChip">
-            <span class="pulse-dot" aria-hidden="true"></span>
-            <span class="chip-label">Status:</span>
-            <span class="chip-value">Parsing Complete</span>
-          </div>
-          <div class="status-chip progress" id="progressChip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            <span class="chip-label">Progress:</span>
-            <span class="chip-value">45% Complete</span>
-          </div>
-          <div class="topbar-avatar" aria-label="Investigator account">
-            <span>INV</span>
-          </div>
+          <div class="topbar-avatar" aria-label="Investigator account"><span>INV</span></div>
         </div>
       </header>
 
-      <!-- MAIN CONTENT -->
-      <main class="content" id="mainContent" role="main">
+      <main class="content" id="appContent" role="main"></main>
 
-        <!-- ===== WECA SUMMARY CARD ===== -->
-        <section class="weca-summary-card" id="wecaSummaryCard" aria-labelledby="wecaSummaryHeading">
-          <div class="weca-summary-left">
-            <div class="weca-summary-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-            </div>
-            <div>
-              <h2 id="wecaSummaryHeading" class="weca-summary-title">WECA Summary</h2>
-              <p class="weca-summary-sub">Weighted Evidence Correlation Algorithm</p>
-            </div>
-          </div>
-          <div class="weca-summary-stats">
-            <div class="weca-stat-chip">
-              <div class="weca-stat-value" id="wecaTotal">—</div>
-              <div class="weca-stat-label">Entities Analysed</div>
-            </div>
-            <div class="weca-stat-chip high">
-              <div class="weca-stat-value" id="wecaHigh">—</div>
-              <div class="weca-stat-label">High Priority</div>
-            </div>
-            <div class="weca-stat-chip medium">
-              <div class="weca-stat-value" id="wecaMedium">—</div>
-              <div class="weca-stat-label">Medium</div>
-            </div>
-            <div class="weca-stat-chip low">
-              <div class="weca-stat-value" id="wecaLow">—</div>
-              <div class="weca-stat-label">Low</div>
-            </div>
-          </div>
-          <div class="weca-top-entity" id="wecaTopEntity">
-            <div class="weca-top-label">Highest Correlation</div>
-            <div class="weca-top-name" id="wecaTopName">—</div>
-            <div class="weca-top-score">
-              <div class="weca-score-arc-wrap">
-                <svg class="weca-score-arc" viewBox="0 0 60 60" aria-hidden="true">
-                  <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(56,189,248,0.12)" stroke-width="5"/>
-                  <circle cx="30" cy="30" r="24" fill="none" stroke="url(#wecaArcGrad)" stroke-width="5"
-                    stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="150.8"
-                    transform="rotate(-90 30 30)" id="wecaArcPath"/>
-                  <defs>
-                    <linearGradient id="wecaArcGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="#38bdf8"/>
-                      <stop offset="100%" stop-color="#a78bfa"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <span class="weca-arc-pct" id="wecaTopPct">—</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ===== SECTION 1: ARTIFACT EXTRACTION SUMMARY ===== -->
-        <section class="content-section" aria-labelledby="artifactHeading">
-          <div class="section-header">
-            <div class="section-title-group">
-              <div class="section-icon green" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              </div>
-              <div>
-                <h2 id="artifactHeading" class="section-title">Artifact Extraction Summary</h2>
-                <p class="section-subtitle">Extracted from <span class="mono">Device_001.ufdr</span> — Parsing complete</p>
-              </div>
-            </div>
-            <div class="section-tag">Phase 1 · Complete</div>
-          </div>
-
-          <div class="artifact-cards-grid">
-            <!-- Contacts -->
-            <article class="artifact-card" id="card-contacts" tabindex="0">
-              <div class="card-glow glow-blue" aria-hidden="true"></div>
-              <div class="card-header-row">
-                <div class="card-icon-wrap blue">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
-                </div>
-                <span class="card-status-dot green"></span>
-              </div>
-              <div class="card-body">
-                <div class="card-count" data-target="342">0</div>
-                <div class="card-label">Contacts Found</div>
-                <div class="card-meta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  <span>+12 new entries</span>
-                </div>
-              </div>
-            </article>
-
-            <!-- Messages -->
-            <article class="artifact-card" id="card-messages" tabindex="0">
-              <div class="card-glow glow-purple" aria-hidden="true"></div>
-              <div class="card-header-row">
-                <div class="card-icon-wrap purple">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                </div>
-                <span class="card-status-dot green"></span>
-              </div>
-              <div class="card-body">
-                <div class="card-count" data-target="1847">0</div>
-                <div class="card-label">Messages Found</div>
-                <div class="card-meta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  <span>SMS &amp; Instant Messages</span>
-                </div>
-              </div>
-            </article>
-
-            <!-- Call Logs -->
-            <article class="artifact-card" id="card-calls" tabindex="0">
-              <div class="card-glow glow-cyan" aria-hidden="true"></div>
-              <div class="card-header-row">
-                <div class="card-icon-wrap cyan">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.81 19.79 19.79 0 01.21 2.18 2 2 0 012.18 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z"/></svg>
-                </div>
-                <span class="card-status-dot green"></span>
-              </div>
-              <div class="card-body">
-                <div class="card-count" data-target="519">0</div>
-                <div class="card-label">Call Logs</div>
-                <div class="card-meta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  <span>Inbound &amp; outbound</span>
-                </div>
-              </div>
-            </article>
-
-            <!-- Emails -->
-            <article class="artifact-card" id="card-emails" tabindex="0">
-              <div class="card-glow glow-indigo" aria-hidden="true"></div>
-              <div class="card-header-row">
-                <div class="card-icon-wrap indigo">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
-                </div>
-                <span class="card-status-dot green"></span>
-              </div>
-              <div class="card-body">
-                <div class="card-count" data-target="203">0</div>
-                <div class="card-label">Emails</div>
-                <div class="card-meta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  <span>Cached mailboxes</span>
-                </div>
-              </div>
-            </article>
-
-            <!-- URLs -->
-            <article class="artifact-card" id="card-urls" tabindex="0">
-              <div class="card-glow glow-teal" aria-hidden="true"></div>
-              <div class="card-header-row">
-                <div class="card-icon-wrap teal">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                </div>
-                <span class="card-status-dot green"></span>
-              </div>
-              <div class="card-body">
-                <div class="card-count" data-target="738">0</div>
-                <div class="card-label">URLs</div>
-                <div class="card-meta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  <span>Browser history</span>
-                </div>
-              </div>
-            </article>
-
-            <!-- Locations -->
-            <article class="artifact-card" id="card-locations" tabindex="0">
-              <div class="card-glow glow-orange" aria-hidden="true"></div>
-              <div class="card-header-row">
-                <div class="card-icon-wrap orange">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                </div>
-                <span class="card-status-dot green"></span>
-              </div>
-              <div class="card-body">
-                <div class="card-count" data-target="91">0</div>
-                <div class="card-label">Locations</div>
-                <div class="card-meta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                  <span>GPS &amp; geotags</span>
-                </div>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <!-- ===== TWO-COLUMN LAYOUT ===== -->
-        <div class="two-col-grid">
-
-          <!-- ===== SECTION 2: WECA EXTRACTED ENTITIES TABLE ===== -->
-          <section class="content-section weca-entities-section" aria-labelledby="entitiesHeading">
-            <div class="section-header">
-              <div class="section-title-group">
-                <div class="section-icon purple" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h7"/><circle cx="17" cy="17" r="3"/><path d="M19.5 19.5L22 22"/></svg>
-                </div>
-                <div>
-                  <h2 id="entitiesHeading" class="section-title">Extracted Entities — WECA Scores</h2>
-                  <p class="section-subtitle">Click any row to view evidence breakdown · Sorted by correlation score</p>
-                </div>
-              </div>
-              <span class="section-tag done">WECA ✓</span>
-            </div>
-
-            <div class="table-wrap entities-table-wrap">
-              <table class="data-table weca-table" id="entitiesTable" aria-label="WECA entity correlation table">
-                <thead>
-                  <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Type</th>
-                    <th scope="col" class="text-right" title="Call links">Calls</th>
-                    <th scope="col" class="text-right" title="Message links">Msgs</th>
-                    <th scope="col" class="text-right" title="Email links">Emails</th>
-                    <th scope="col" class="text-right" title="Shared locations">Locs</th>
-                    <th scope="col" class="text-right" title="Suspicious URLs">URLs</th>
-                    <th scope="col" class="text-right" title="Deleted messages">Del.Msgs</th>
-                    <th scope="col" class="text-right" title="WECA raw score">Raw Score</th>
-                    <th scope="col" class="text-right" title="Normalised correlation percentage">Corr%</th>
-                    <th scope="col" class="text-center">Priority</th>
-                  </tr>
-                </thead>
-                <tbody id="wecaTableBody">
-                  <!-- Populated by app.js -->
-                </tbody>
-              </table>
-            </div>
-            <div class="table-footer">
-              <span class="mono text-muted" id="wecaTableCount">Loading…</span>
-              <div class="weca-weight-legend">
-                <span class="wl-item">Call×2</span>
-                <span class="wl-item">Msg×3</span>
-                <span class="wl-item">Email×4</span>
-                <span class="wl-item">Loc×5</span>
-                <span class="wl-item">URL×6</span>
-                <span class="wl-item wl-high">Del×7</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===== SECTION 3: RECENT EXTRACTED CONTACTS ===== -->
-          <section class="content-section" aria-labelledby="contactsHeading">
-            <div class="section-header">
-              <div class="section-title-group">
-                <div class="section-icon blue" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
-                </div>
-                <div>
-                  <h2 id="contactsHeading" class="section-title">Recent Extracted Contacts</h2>
-                  <p class="section-subtitle">Last parsed from contact database</p>
-                </div>
-              </div>
-              <span class="section-tag done">Extracted ✓</span>
-            </div>
-
-            <div class="search-bar-wrap">
-              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="search" class="search-input" placeholder="Filter contacts..." id="contactSearch" aria-label="Filter contacts"/>
-            </div>
-
-            <div class="table-wrap">
-              <table class="data-table contacts-table" id="contactsTable">
-                <thead>
-                  <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Phone Number</th>
-                    <th scope="col">Email</th>
-                  </tr>
-                </thead>
-                <tbody id="contactsBody">
-                  <tr class="table-row" data-delay="0">
-                    <td class="mono text-muted">001</td>
-                    <td><div class="contact-name-cell"><div class="avatar blue">JD</div><span>John Doe</span></div></td>
-                    <td class="mono">+91-9876543210</td>
-                    <td class="mono text-muted">john.doe@gmail.com</td>
-                  </tr>
-                  <tr class="table-row" data-delay="60">
-                    <td class="mono text-muted">002</td>
-                    <td><div class="contact-name-cell"><div class="avatar purple">AK</div><span>Alex Kumar</span></div></td>
-                    <td class="mono">+91-9123456780</td>
-                    <td class="mono text-muted">alex.kumar@yahoo.in</td>
-                  </tr>
-                  <tr class="table-row" data-delay="120">
-                    <td class="mono text-muted">003</td>
-                    <td><div class="contact-name-cell"><div class="avatar cyan">RS</div><span>Rahul Sharma</span></div></td>
-                    <td class="mono">+91-7654321098</td>
-                    <td class="mono text-muted">r.sharma@outlook.com</td>
-                  </tr>
-                  <tr class="table-row" data-delay="180">
-                    <td class="mono text-muted">004</td>
-                    <td><div class="contact-name-cell"><div class="avatar teal">PM</div><span>Priya Mehta</span></div></td>
-                    <td class="mono">+91-8899001122</td>
-                    <td class="mono text-muted">priya.m@gmail.com</td>
-                  </tr>
-                  <tr class="table-row" data-delay="240">
-                    <td class="mono text-muted">005</td>
-                    <td><div class="contact-name-cell"><div class="avatar orange">SK</div><span>Suresh Kumar</span></div></td>
-                    <td class="mono">+91-9988776655</td>
-                    <td class="mono text-muted">skumar@rediffmail.com</td>
-                  </tr>
-                  <tr class="table-row" data-delay="300">
-                    <td class="mono text-muted">006</td>
-                    <td><div class="contact-name-cell"><div class="avatar indigo">NP</div><span>Neha Patel</span></div></td>
-                    <td class="mono">+91-9012345678</td>
-                    <td class="mono text-muted">neha.patel@gmail.com</td>
-                  </tr>
-                  <tr class="table-row" data-delay="360">
-                    <td class="mono text-muted">007</td>
-                    <td><div class="contact-name-cell"><div class="avatar blue">VP</div><span>Vijay Prasad</span></div></td>
-                    <td class="mono">+91-9321456780</td>
-                    <td class="mono text-muted">v.prasad@hotmail.com</td>
-                  </tr>
-                  <tr class="table-row" data-delay="420">
-                    <td class="mono text-muted">008</td>
-                    <td><div class="contact-name-cell"><div class="avatar purple">AI</div><span>Aisha Ibrahim</span></div></td>
-                    <td class="mono">+91-8765432190</td>
-                    <td class="mono text-muted">aisha.i@gmail.com</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="table-footer">
-              <span class="mono text-muted">Showing 8 of 342 contacts</span>
-              <div class="pagination">
-                <button class="page-btn active" aria-label="Page 1" aria-current="true">1</button>
-                <button class="page-btn" aria-label="Page 2">2</button>
-                <button class="page-btn" aria-label="Page 3">3</button>
-                <span class="page-ellipsis">…</span>
-                <button class="page-btn" aria-label="Page 43">43</button>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <!-- ===== SECTION 4: WECA CORRELATION GRAPH ===== -->
-        <section class="content-section wide-section" aria-labelledby="correlationHeading">
-          <div class="section-header">
-            <div class="section-title-group">
-              <div class="section-icon blue" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="6" y1="8" x2="6" y2="16"/><line x1="8" y1="18" x2="16" y2="18"/><line x1="18" y1="8" x2="18" y2="16"/></svg>
-              </div>
-              <div>
-                <h2 id="correlationHeading" class="section-title">Evidence Correlation Graph — WECA Active</h2>
-                <p class="section-subtitle">Top-5 entities · Edge weight proportional to correlation score · Click node for details</p>
-              </div>
-            </div>
-            <div class="weca-active-badge">
-              <span class="wip-pulse" aria-hidden="true"></span>
-              ⚡ WECA Engine Active
-            </div>
-          </div>
-
-          <div class="graph-container" id="graphContainer" role="img" aria-label="WECA evidence correlation graph — top 5 entities">
-            <canvas id="wecaGraphCanvas" class="weca-graph-canvas"></canvas>
-            <div id="graphNodeTooltip" class="graph-node-tooltip" style="display:none" aria-hidden="true"></div>
-
-            <!-- Graph Legend -->
-            <div class="graph-legend" aria-label="Graph legend">
-              <div class="legend-item">
-                <span class="legend-dot" style="background:#38bdf8"></span>
-                <span>Device Owner</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot" style="background:#ef4444"></span>
-                <span>High Priority</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot" style="background:#f59e0b"></span>
-                <span>Medium Priority</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot" style="background:#38bdf8; opacity:0.5"></span>
-                <span>Low Priority</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-line" style="border-color:#38bdf8"></span>
-                <span>Strong Correlation</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-line" style="border-color:#4d6f99; border-style:dashed"></span>
-                <span>Weak Correlation</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ===== SECTION 5: DEVELOPMENT PROGRESS ===== -->
-        <section class="content-section" aria-labelledby="progressHeading">
-          <div class="section-header">
-            <div class="section-title-group">
-              <div class="section-icon blue" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              </div>
-              <div>
-                <h2 id="progressHeading" class="section-title">Development Progress</h2>
-                <p class="section-subtitle">Phase I — 2-week sprint status</p>
-              </div>
-            </div>
-            <div class="progress-overall">
-              <span class="mono">45% Overall</span>
-              <div class="overall-bar">
-                <div class="overall-bar-fill" style="width:45%"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="progress-grid">
-
-            <!-- COMPLETED -->
-            <div class="progress-column">
-              <div class="progress-col-header green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                <span>Completed</span>
-                <span class="col-count">4</span>
-              </div>
-              <ul class="progress-list" aria-label="Completed tasks">
-                <li class="progress-item done" tabindex="0">
-                  <div class="item-icon done">✓</div>
-                  <div class="item-body">
-                    <div class="item-title">UFDR Upload Module</div>
-                    <div class="item-desc">File parsing &amp; validation pipeline complete</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:100%"></div></div>
-                  </div>
-                  <span class="item-pct">100%</span>
-                </li>
-                <li class="progress-item done" tabindex="0">
-                  <div class="item-icon done">✓</div>
-                  <div class="item-body">
-                    <div class="item-title">Artifact Extraction</div>
-                    <div class="item-desc">Contacts, messages, calls, emails, URLs, GPS</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:100%"></div></div>
-                  </div>
-                  <span class="item-pct">100%</span>
-                </li>
-                <li class="progress-item done" tabindex="0">
-                  <div class="item-icon done">✓</div>
-                  <div class="item-body">
-                    <div class="item-title">Database Storage</div>
-                    <div class="item-desc">SQLite schema &amp; ORM layer implemented</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:100%"></div></div>
-                  </div>
-                  <span class="item-pct">100%</span>
-                </li>
-                <li class="progress-item done" tabindex="0">
-                  <div class="item-icon done">✓</div>
-                  <div class="item-body">
-                    <div class="item-title">Entity Extraction (NLP)</div>
-                    <div class="item-desc">spaCy NER pipeline — persons, orgs, locations</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:100%"></div></div>
-                  </div>
-                  <span class="item-pct">100%</span>
-                </li>
-              </ul>
-            </div>
-
-            <!-- IN PROGRESS -->
-            <div class="progress-column">
-              <div class="progress-col-header yellow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                <span>In Progress</span>
-                <span class="col-count">1</span>
-              </div>
-              <ul class="progress-list" aria-label="Tasks in progress">
-                <li class="progress-item wip" tabindex="0">
-                  <div class="item-icon wip">⚡</div>
-                  <div class="item-body">
-                    <div class="item-title">Evidence Correlation Engine</div>
-                    <div class="item-desc">Graph construction &amp; entity linking in progress</div>
-                    <div class="item-bar">
-                      <div class="item-bar-fill wip-bar" style="width:35%"></div>
-                    </div>
-                    <div class="item-sub-tasks">
-                      <span class="sub-done">✓ Data model</span>
-                      <span class="sub-done">✓ Graph DB setup</span>
-                      <span class="sub-wip">⚡ Linking logic</span>
-                      <span class="sub-todo">○ Visualisation</span>
-                    </div>
-                  </div>
-                  <span class="item-pct wip-pct">35%</span>
-                </li>
-              </ul>
-            </div>
-
-            <!-- UPCOMING -->
-            <div class="progress-column">
-              <div class="progress-col-header grey">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>Upcoming</span>
-                <span class="col-count">4</span>
-              </div>
-              <ul class="progress-list" aria-label="Upcoming tasks">
-                <li class="progress-item todo" tabindex="0">
-                  <div class="item-icon todo">○</div>
-                  <div class="item-body">
-                    <div class="item-title">Risk Score Generation</div>
-                    <div class="item-desc">ML-based entity risk assessment module</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:0%"></div></div>
-                  </div>
-                  <span class="item-pct todo-pct">—</span>
-                </li>
-                <li class="progress-item todo" tabindex="0">
-                  <div class="item-icon todo">○</div>
-                  <div class="item-body">
-                    <div class="item-title">Explainable AI (XAI)</div>
-                    <div class="item-desc">LIME/SHAP integration for decision transparency</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:0%"></div></div>
-                  </div>
-                  <span class="item-pct todo-pct">—</span>
-                </li>
-                <li class="progress-item todo" tabindex="0">
-                  <div class="item-icon todo">○</div>
-                  <div class="item-body">
-                    <div class="item-title">Investigation Summary</div>
-                    <div class="item-desc">Auto-generated forensic narrative reports</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:0%"></div></div>
-                  </div>
-                  <span class="item-pct todo-pct">—</span>
-                </li>
-                <li class="progress-item todo" tabindex="0">
-                  <div class="item-icon todo">○</div>
-                  <div class="item-body">
-                    <div class="item-title">Investigator Query Assistant</div>
-                    <div class="item-desc">Natural language Q&amp;A interface over evidence</div>
-                    <div class="item-bar"><div class="item-bar-fill" style="width:0%"></div></div>
-                  </div>
-                  <span class="item-pct todo-pct">—</span>
-                </li>
-              </ul>
-            </div>
-
-          </div>
-        </section>
-
-      </main>
-
-      <!-- FOOTER -->
       <footer class="app-footer">
-        <span class="mono">ForensiAI-X v0.4.5-alpha</span>
-        <span class="separator">·</span>
-        <span>Phase I — Evidence Extraction &amp; Entity Analysis</span>
-        <span class="separator">·</span>
-        <span class="mono">Device_001.ufdr</span>
-        <span class="separator">·</span>
-        <span>Final Year Project — 2024</span>
+        <span class="mono">ForensiAI-X</span>
+        <span class="separator">�</span>
+        <span id="footerStatus">Upload a UFDR report to begin forensic analysis.</span>
       </footer>
     </div>
   </div>
 
-  <!-- ===== EVIDENCE DETAIL PANEL ===== -->
   <div class="panel-overlay" id="panelOverlay" aria-hidden="true"></div>
   <aside class="evidence-panel" id="evidencePanel" role="dialog" aria-modal="true" aria-labelledby="panelEntityName" aria-hidden="true">
     <div class="panel-header">
       <div class="panel-header-left">
-        <div class="panel-avatar" id="panelAvatar">JD</div>
+        <div class="panel-avatar" id="panelAvatar">--</div>
         <div>
-          <div class="panel-entity-name" id="panelEntityName">—</div>
-          <div class="panel-entity-meta" id="panelEntityMeta">—</div>
+          <div class="panel-entity-name" id="panelEntityName">No Entity Selected</div>
+          <div class="panel-entity-meta" id="panelEntityMeta">Select an entity to review evidence.</div>
         </div>
       </div>
       <button class="panel-close-btn" id="panelCloseBtn" aria-label="Close evidence panel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-
-    <div class="panel-score-row">
-      <div class="panel-score-gauge">
-        <svg class="panel-arc-svg" viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(56,189,248,0.1)" stroke-width="8"/>
-          <circle cx="50" cy="50" r="40" fill="none" stroke="url(#panelArcGrad)" stroke-width="8"
-            stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2"
-            transform="rotate(-90 50 50)" id="panelArcCircle"/>
-          <defs>
-            <linearGradient id="panelArcGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#38bdf8"/>
-              <stop offset="100%" stop-color="#a78bfa"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div class="panel-arc-center">
-          <div class="panel-score-pct" id="panelScorePct">—</div>
-          <div class="panel-score-label">Correlation</div>
-        </div>
-      </div>
-      <div class="panel-score-details">
-        <div class="panel-score-stat">
-          <span class="pss-label">Raw Score</span>
-          <span class="pss-value mono" id="panelRawScore">—</span>
-        </div>
-        <div class="panel-score-stat">
-          <span class="pss-label">Max Possible</span>
-          <span class="pss-value mono" id="panelMaxScore">—</span>
-        </div>
-        <div class="panel-score-stat">
-          <span class="pss-label">Priority</span>
-          <span class="pss-value" id="panelPriorityBadge">—</span>
-        </div>
-        <div class="panel-note" id="panelNote"></div>
-      </div>
-    </div>
-
-    <div class="panel-section-label">EVIDENCE BREAKDOWN</div>
-    <div class="panel-evidence-list" id="panelEvidenceList">
-      <!-- Populated by JS -->
-    </div>
-
-    <div class="panel-section-label">WECA CALCULATION</div>
-    <div class="panel-calc-block" id="panelCalcBlock">
-      <!-- Populated by JS -->
-    </div>
-
-    <div class="panel-footer-note">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Scores computed by WECA v1.0 · ForensiAI-X Phase 1 · XAI explanations coming in Phase 2
-    </div>
+    <div class="panel-body" id="panelBody"></div>
   </aside>
 
   <script src="app.js"></script>
