@@ -45,6 +45,8 @@ function dash(){
   if(S.loading.investigation)return page('Dashboard','Investigation summary appears here after upload.','<div class="summary-grid">'+Array.from({length:6},()=>'<div class="skeleton skeleton-card"></div>').join('')+'</div>');
   if(!S.investigation)return page('Dashboard','Investigation summary appears here after upload.',empty('No investigation loaded.','Upload a UFDR report to begin forensic analysis.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>'));
   
+  if(!S.graph && !S.loading.correlation) setTimeout(()=>load('correlation'),0);
+
   const i=S.investigation, g=S.graph;
   let arts=0; TYPES.forEach(([k])=> arts+=(i.artifactCounts[k]||0));
   let rels=g?(g.edges||[]).filter(e=>e.score>0&&e.relationship!=='owns'&&e.relationship!=='visited').length:'N/A';
