@@ -64,27 +64,29 @@ function graph(){
       for(let j=0;j<nodes.length;j++){
         for(let k=j+1;k<nodes.length;k++){
           const a=nodes[j],b=nodes[k],dx=b.x-a.x,dy=b.y-a.y;
-          const dist=Math.sqrt(dx*dx+dy*dy)||1,f=1200/(dist*dist),fx=(dx/dist)*f*alpha,fy=(dy/dist)*f*alpha;
+          const dist=Math.sqrt(dx*dx+dy*dy)||1,f=3000/(dist*dist),fx=(dx/dist)*f*alpha,fy=(dy/dist)*f*alpha;
           if(!a.fixed){a.vx-=fx;a.vy-=fy;}
           if(!b.fixed){b.vx+=fx;b.vy+=fy;}
         }
       }
       edges.forEach(e=>{
         const a=e.sourceNode,b=e.targetNode,dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
-        const isAssoc=!e.relationship?.startsWith('shared_'),restLen=isAssoc?120:200,f=(dist-restLen)*0.04;
+        const isAssoc = !e.relationship || e.relationship === 'owns' || e.relationship === 'visited';
+        const restLen = isAssoc ? 180 : 350;
+        const f=(dist-restLen)*0.06;
         const fx=(dx/dist)*f*alpha,fy=(dy/dist)*f*alpha;
         if(!a.fixed){a.vx+=fx;a.vy+=fy;}
         if(!b.fixed){b.vx-=fx;b.vy-=fy;}
       });
       nodes.forEach(n=>{
         if(!n.fixed){
-          n.vx+=((width/2)-n.x)*0.01*alpha; n.vy+=((height/2)-n.y)*0.01*alpha;
-          n.vx*=0.85; n.vy*=0.85; n.x+=n.vx; n.y+=n.vy;
+          n.vx+=((width/2)-n.x)*0.005*alpha; n.vy+=((height/2)-n.y)*0.005*alpha;
+          n.vx*=0.80; n.vy*=0.80; n.x+=n.vx; n.y+=n.vy;
         }
       });
       for(let j=0;j<nodes.length;j++){
         for(let k=j+1;k<nodes.length;k++){
-          const a=nodes[j],b=nodes[k],dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1,minD=a.r+b.r+6;
+          const a=nodes[j],b=nodes[k],dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1,minD=a.r+b.r+25;
           if(dist<minD){
             const push=(minD-dist)/2,px=(dx/dist)*push,py=(dy/dist)*push;
             if(!a.fixed){a.x-=px;a.y-=py;}
@@ -99,7 +101,7 @@ function graph(){
     simNodes=S.graph.nodes.map(n=>({id:n.id,type:n.type||'other',label:n.label||n.name||n.id||'Node',x:Math.random()*W,y:Math.random()*H,vx:0,vy:0,r:(NODE_STYLES[n.type]?.r||14),fixed:false,data:n}));
     const find=id=>simNodes.find(n=>String(n.id)===String(id));
     simEdges=(S.graph.edges||[]).map(e=>{const a=find(e.source||e.from),b=find(e.target||e.to);if(!a||!b)return null;let rel=e.relationship||'association',lbl=e.label||'',rs=e.reasons||[];if(e.contributions?.length){rel=e.contributions[0].relationship||rel;lbl=e.contributions.map(c=>`${c.relationship}: ${c.value}`).join(', ');rs=e.contributions.map(c=>c.reason);}return {source:a.id,target:b.id,sourceNode:a,targetNode:b,relationship:rel,score:Number(e.score||0),label:lbl,reasons:rs,data:e,priority:e.priority||'low'};}).filter(Boolean);
-    runSim(simNodes,simEdges,150,W,H);
+    runSim(simNodes,simEdges,300,W,H);
     simDirty=false;
     fitView();
   }
