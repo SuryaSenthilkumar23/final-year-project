@@ -176,24 +176,6 @@ function graph(){
       ctx.strokeStyle=nodeColor(e.priority); ctx.lineWidth=Math.max(1,e.score*6)*view.scale; ctx.globalAlpha=0.5+e.score*0.5; ctx.setLineDash([6*view.scale,6*view.scale]);
     }
     ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]);
-    const lbl=e.label||e.relationship;
-    if(lbl){
-      ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
-      const text = (e.score > 0 && e.relationship !== 'owns' && e.relationship !== 'visited') ? `${lbl} (${e.score.toFixed(2)})` : lbl;
-      const metrics = ctx.measureText(text);
-      const tw = metrics.width + 12*view.scale;
-      const th = 16*view.scale;
-      const cx = (ax+bx)/2, cy = (ay+by)/2 - 6*view.scale;
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath(); 
-      ctx.roundRect(cx - tw/2, cy - th/1.4, tw, th, 4*view.scale); 
-      ctx.fill();
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle='rgba(226,234,244,.95)';
-      ctx.fillText(text,cx,cy);
-    }
   });
   
   visN.forEach(n=>{
@@ -216,6 +198,28 @@ function graph(){
     ctx.fillStyle='#e2eaf4';ctx.font=`600 ${11*view.scale}px Inter`;ctx.textAlign='center';
     ctx.fillText(n.label.length>20?n.label.substring(0,18)+'...':n.label,nx,ny+sr+12*view.scale);
     hits.push({n,x:nx,y:ny,r:sr});
+  });
+
+  visE.forEach(e=>{
+    const a=e.sourceNode,b=e.targetNode,ax=view.x+a.x*view.scale,ay=view.y+a.y*view.scale,bx=view.x+b.x*view.scale,by=view.y+b.y*view.scale;
+    const lbl=e.label||e.relationship;
+    if(lbl){
+      ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
+      const text = (e.score > 0 && e.relationship !== 'owns' && e.relationship !== 'visited') ? `${lbl} (${e.score.toFixed(2)})` : lbl;
+      const metrics = ctx.measureText(text);
+      const tw = metrics.width + 12*view.scale;
+      const th = 16*view.scale;
+      const cx = (ax+bx)/2, cy = (ay+by)/2 - 6*view.scale;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); 
+      ctx.roundRect(cx - tw/2, cy - th/1.4, tw, th, 4*view.scale); 
+      ctx.fill();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle='rgba(226,234,244,.95)';
+      ctx.fillText(text,cx,cy);
+    }
   });
 
   c.onmousemove=e=>{
