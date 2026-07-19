@@ -2,9 +2,21 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import json
-import datetime
 import zipfile
+import time
+import datetime
+from flask import Flask, jsonify, request, send_from_directory
 import xml.etree.ElementTree as ET
+
+from ufdr_parser import parse_raw_records
+from investigation_builder import build_investigation
+from normalization_engine import normalize_investigations
+from evidence_index import EvidenceIndex
+from weca_engine import correlate_evidence
+from risk_assessment import assess_risk
+from graph_generator import generate_graph
+
+from graph_builder import build_graph
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
@@ -33,7 +45,7 @@ investigation_state = {
 }
 artifacts_store = []
 entities_store = []
-graph_store = {'nodes': [], 'edges': []}
+graph_store = {'nodes': [], 'edges': [], 'summary': {}, 'weights': {}}
 reports_store = []
 
 
@@ -60,6 +72,9 @@ def parse_xml_from_string(xml_bytes, source_name='file'):
     except ET.ParseError:
         return counts, entities, artifacts
 
+    # Precompute parent map once for owner context lookups
+    parent_map = {c: p for p in root.iter() for c in p}
+
     for elem in root.iter():
         tag = elem.tag.lower()
         text = (elem.text or '').strip()
@@ -80,8 +95,17 @@ def parse_xml_from_string(xml_bytes, source_name='file'):
         if 'document' in tag or 'file' in tag or 'pdf' in tag or 'doc' in tag:
             counts['documents'] += 1
 
-        if 'entity' in tag or 'person' in tag or 'address' in tag or 'email' in tag or 'url' in tag:
+        if any(k in tag for k in ['entity', 'person', 'name', 'contact', 'address', 'email', 'url', 'phone', 'mobile', 'gps', 'location', 'coordinate', 'ip', 'device', 'call', 'message']):
             if text:
+                attribs = dict(elem.attrib)
+                parent = parent_map.get(elem)
+                if parent is not None:
+                    for sibling in parent:
+                        if sibling != elem and any(k in sibling.tag.lower() for k in ['name', 'person', 'contact']):
+                            if sibling.text and sibling.text.strip():
+                                attribs['owner'] = sibling.text.strip()
+                                break
+                
                 entities.append({
                     'type': tag,
                     'value': text,
@@ -89,7 +113,7 @@ def parse_xml_from_string(xml_bytes, source_name='file'):
                     'confidence': 0,
                     'evidenceSource': source_name,
                     'priority': 'Low',
-                    'evidenceDetails': {'tag': elem.tag, 'attributes': elem.attrib}
+                    'evidenceDetails': {'tag': elem.tag, 'attributes': attribs}
                 })
 
         if 'artifact' in tag or 'record' in tag or 'entry' in tag:
@@ -104,52 +128,38 @@ def parse_xml_from_string(xml_bytes, source_name='file'):
     return counts, entities, artifacts
 
 
+
+def merge_investigations(target, source):
+    for pid, person in source.items():
+        if pid not in target:
+            target[pid] = person
+        else:
+            t = target[pid]
+            t.phones.update(person.phones)
+            t.emails.update(person.emails)
+            t.locations.update(person.locations)
+            t.urls.update(person.urls)
+            t.devices.update(person.devices)
+            t.ip_addresses.update(person.ip_addresses)
+            t.files.update(person.files)
+            t.images.update(person.images)
+            t.timeline.extend(person.timeline)
+
+
 def merge_counts(base, incoming):
     for key in base:
         base[key] += incoming.get(key, 0)
     return base
 
 
-def build_correlation_graph():
-    nodes = []
-    edges = []
-    nodes.append({
-        'id': 'investigation',
-        'label': investigation_state['name'] or 'Investigation',
-        'type': 'investigation',
-        'group': 'root'
-    })
-
-    for artifact_type, count in investigation_state['artifactCounts'].items():
-        if count > 0:
-            node_id = f'artifact-{artifact_type}'
-            nodes.append({
-                'id': node_id,
-                'label': artifact_type.capitalize(),
-                'type': 'artifact',
-                'count': count,
-                'group': 'artifact'
-            })
-            edges.append({'from': 'investigation', 'to': node_id, 'relation': 'contains'})
-
-    for idx, entity in enumerate(entities_store[:8]):
-        node_id = f'entity-{idx}'
-        nodes.append({
-            'id': node_id,
-            'label': entity.get('value', 'Entity'),
-            'type': 'entity',
-            'entityType': entity.get('type'),
-            'group': 'entity'
-        })
-        edges.append({'from': 'investigation', 'to': node_id, 'relation': 'references'})
-
-    return {'nodes': nodes, 'edges': edges}
-
-
 def build_reports():
     reports = []
     total_artifacts = sum(investigation_state['artifactCounts'].values())
-    report_summary = f"{total_artifacts} artifact items and {len(entities_store)} extracted entities found."
+    relationship_count = len(graph_store.get('edges', []))
+    report_summary = (
+        f"{total_artifacts} artifact items, {len(entities_store)} extracted entities, and "
+        f"{relationship_count} evidence-backed relationships found."
+    )
     reports.append({
         'name': 'Investigation Summary',
         'status': 'Ready',
@@ -164,19 +174,20 @@ def build_reports():
         'description': json.dumps(investigation_state['artifactCounts'])
     })
 
-    if entities_store:
+    if graph_store.get('edges'):
+        top_edge = max(graph_store['edges'], key=lambda edge: edge.get('score', 0))
         reports.append({
-            'name': 'Top Entities',
+            'name': 'Top Correlation',
             'status': 'Ready',
-            'summary': f'{min(8, len(entities_store))} entities selected for correlation analysis.',
-            'description': ', '.join([entity.get('value', 'Unknown') for entity in entities_store[:8]])
+            'summary': f"{top_edge.get('source')} -> {top_edge.get('target')} scored {top_edge.get('score', 0):.2f}",
+            'description': ', '.join(top_edge.get('reasons', []))
         })
 
     return reports
 
 
 def reset_state():
-    global investigation_state, artifacts_store, entities_store, graph_store, reports_store
+    global investigation_state, artifacts_store, entities_store, graph_store, reports_store, investigations_store
     investigation_state = {
         'id': None,
         'name': None,
@@ -198,12 +209,14 @@ def reset_state():
     }
     artifacts_store = []
     entities_store = []
-    graph_store = {'nodes': [], 'edges': []}
+    graph_store = {'nodes': [], 'edges': [], 'summary': {}, 'weights': {}}
     reports_store = []
+    investigations_store = {}
 
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
+    global graph_store, investigations_store
     if 'file' not in request.files:
         return jsonify(error='No file uploaded'), 400
     f = request.files['file']
@@ -234,26 +247,41 @@ def upload():
     investigation_state['latestScanTime'] = current_time()
 
     if file_type == 'zip':
-        try:
-            with zipfile.ZipFile(save_path, 'r') as zf:
-                for name in zf.namelist():
-                    if name.lower().endswith('.xml') or name.lower().endswith('.ufdr'):
+        with zipfile.ZipFile(save_path, 'r') as zf:
+            for name in zf.namelist():
+                if name.lower().endswith('.xml') or name.lower().endswith('.ufdr'):
+                    try:
                         with zf.open(name) as entry:
                             xml_bytes = entry.read()
+                            
+                            # Legacy dashboard state
                             counts, entities, artifacts = parse_xml_from_string(xml_bytes, source_name=name)
                             merge_counts(investigation_state['artifactCounts'], counts)
                             artifacts_store.extend(artifacts)
                             entities_store.extend(entities)
-        except Exception:
-            pass
+                            
+                            # New pipeline
+                            raw_records = parse_raw_records(xml_bytes)
+                            invs = build_investigation(raw_records)
+                            normalize_investigations(invs)
+                            merge_investigations(investigations_store, invs)
+                    except Exception as e:
+                        print(f"Skipping file {name} in zip due to error: {e}")
     elif file_type == 'xml':
+        # Legacy dashboard state
         counts, entities, artifacts = parse_xml_from_string(content, source_name=f.filename)
         merge_counts(investigation_state['artifactCounts'], counts)
         artifacts_store.extend(artifacts)
         entities_store.extend(entities)
+        
+        # New pipeline
+        raw_records = parse_raw_records(content)
+        invs = build_investigation(raw_records)
+        normalize_investigations(invs)
+        merge_investigations(investigations_store, invs)
     elif file_type == 'json':
         try:
-            data = json.loads(content)
+            json.loads(content)
             investigation_state['artifactCounts']['documents'] += 1
             entities_store.append({
                 'type': 'json',
@@ -267,15 +295,19 @@ def upload():
         except Exception:
             pass
 
+    index = EvidenceIndex(investigations_store)
+    edges = correlate_evidence(investigations_store, index)
+    assess_risk(investigations_store, edges)
+    graph_store = generate_graph(investigations_store, edges)
+    
     investigation_state['entityCount'] = len(entities_store)
-    total_items = sum(investigation_state['artifactCounts'].values())
-    investigation_state['prioritySummary']['total'] = total_items
-    investigation_state['prioritySummary']['high'] = max(0, (entities_store and 1) or 0)
+    investigation_state['prioritySummary']['total'] = len(graph_store.get('edges', []))
+    investigation_state['prioritySummary']['high'] = 0
     investigation_state['prioritySummary']['medium'] = 0
     investigation_state['prioritySummary']['low'] = 0
-    investigation_state['prioritySummary']['topName'] = entities_store[0]['value'] if entities_store else None
-    investigation_state['extractionStatus'] = 'Completed' if total_items > 0 or len(entities_store) > 0 else 'Completed'
-    graph_store.update(build_correlation_graph())
+    top_pair = []
+    investigation_state['prioritySummary']['topName'] = ' / '.join(top_pair) if top_pair else None
+    investigation_state['extractionStatus'] = 'Completed'
     reports_store.clear()
     reports_store.extend(build_reports())
 
@@ -314,12 +346,35 @@ def artifacts():
 
 @app.route('/api/entities', methods=['GET'])
 def entities():
-    return jsonify({'entities': entities_store})
+    entities_list = []
+    for person in investigations_store.values():
+        entities_list.append({
+            'type': 'Person',
+            'value': person.name,
+            'frequency': len(person.timeline),
+            'confidence': getattr(person, 'risk_score', 0.0),
+            'evidenceSource': 'WECA Engine',
+            'priority': 'Medium' if getattr(person, 'risk_score', 0.0) >= 0.40 else 'Low',
+            'evidenceDetails': {
+                'Phones': list(person.phones.keys()),
+                'Emails': list(person.emails.keys()),
+                'Locations': list(person.locations.keys()),
+                'Devices': list(person.devices.keys()),
+                'IP Addresses': list(person.ip_addresses.keys()),
+                'Files': list(person.files.keys()),
+                'Timeline Events': len(person.timeline)
+            }
+        })
+    return jsonify({'entities': entities_list})
 
 
 @app.route('/api/correlation-graph', methods=['GET'])
 def correlation_graph():
     return jsonify(graph_store)
+
+@app.route('/api/hello', methods=['GET'])
+def hello():
+    return jsonify({"hello": "world"})
 
 
 @app.route('/api/reports', methods=['GET'])
@@ -330,12 +385,11 @@ def reports():
 @app.route('/', defaults={'path': 'index.html'})
 @app.route('/<path:path>')
 def static_files(path):
-    # serve files from the project directory so you can keep your existing static server
     if os.path.exists(path):
         return send_from_directory('.', path)
     return send_from_directory('.', 'index.html')
 
 
 if __name__ == '__main__':
-    # Run on port 3000 to avoid conflicting with simple static servers
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    # Disable the reloader so uploading zip files to the static directory doesn't crash the server
+    app.run(host='0.0.0.0', port=3000, debug=True, use_reloader=False)
