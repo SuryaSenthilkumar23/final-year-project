@@ -7,6 +7,26 @@ const NODE_STYLES={person:{fill:'#4ade80',stroke:'#22c55e',r:36,icon:'person'},p
 let simNodes=[],simEdges=[],dragNode=null,simDirty=true;
 const cfg=()=>window.FORENSIAI_CONFIG||{apiBaseUrl:'',endpoints:{}};
 const api=k=>`${cfg().apiBaseUrl||''}${(cfg().endpoints||{})[k]||''}`;
+function getGraphSummary(){
+  let pCount=0,rCount=0,highRisk='-',strongL='-',avgCorr=0;
+  if(S.graph?.nodes){
+    const pN=S.graph.nodes.filter(n=>n.type==='person');
+    pCount=pN.length;
+    const hp=pN.find(n=>(n.priority||'').toLowerCase()==='high')||pN[0];
+    if(hp)highRisk=hp.label||hp.name;
+    const rE=(S.graph.edges||[]).filter(e=>e.score>0&&e.relationship!=='owns'&&e.relationship!=='visited');
+    rCount=rE.length;
+    if(rCount>0){
+      let mx=rE[0],sm=0;
+      rE.forEach(e=>{if(e.score>mx.score)mx=e; sm+=e.score;});
+      avgCorr=(sm/rCount).toFixed(2);
+      const aN=S.graph.nodes.find(n=>n.id===mx.source||n.id===mx.from);
+      const bN=S.graph.nodes.find(n=>n.id===mx.target||n.id===mx.to);
+      if(aN&&bN)strongL=`${aN.label||aN.name} ↔ ${bN.label||bN.name}`;
+    }
+  }
+  return `<div class="stats-grid" style="margin-bottom:1rem;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));"><article class="stat-card"><div class="stat-label">People</div><div class="stat-value">${pCount}</div></article><article class="stat-card"><div class="stat-label">Relationships</div><div class="stat-value">${rCount}</div></article><article class="stat-card"><div class="stat-label">High Risk</div><div class="stat-value">${esc(highRisk)}</div></article><article class="stat-card"><div class="stat-label">Strongest Link</div><div class="stat-value" style="font-size:1.1rem">${esc(strongL)}</div></article><article class="stat-card"><div class="stat-label">Avg Correlation</div><div class="stat-value">${avgCorr}</div></article></div>`;
+}
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const fmt=v=>{if(!v)return''; const d=new Date(v); return Number.isNaN(d)?v:d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})};
@@ -23,10 +43,10 @@ function dash(){if(S.loading.investigation)return page('Dashboard','Investigatio
 function upload(){const u=S.upload; return page('Upload UFDR','Drag and drop a UFDR report or browse for a file.',`${u.message?`<section class="status-banner success"><strong>Upload complete.</strong><div class="status-text">${esc(u.message)}</div></section>`:''}${u.error?`<section class="status-banner error"><strong>Upload failed.</strong><div class="status-text">${esc(u.error)}</div></section>`:''}${u.processing?`<section class="status-banner loading"><strong>Processing investigation.</strong><div class="status-text">Waiting for backend analysis to finish.</div></section>`:''}<section class="upload-dropzone" id="dropzone"><div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><h2 class="page-title">No Investigation Loaded</h2><p class="page-copy" style="margin:.75rem auto 0;max-width:520px;">Upload a UFDR report to begin forensic analysis.</p><div class="upload-actions" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:1.25rem;"><label class="file-button" for="ufdrFile">Browse UFDR File</label><button class="btn" id="refreshBtn" type="button">Refresh Investigation Status</button></div><input id="ufdrFile" type="file" accept=".ufdr,.zip,.xml,.json" hidden /><div class="accepted-types">Accepted file types: .ufdr, .zip, .xml, .json</div><div class="progress"><div class="progress-bar" id="uploadBar" style="width:${u.progress}%"></div></div><div class="helper-text" style="margin-top:.65rem;">Upload progress: ${u.progress}%</div></section>`)}
 function art(){if(!S.investigation)return page('Artifacts','Review extracted forensic artifacts by category.',empty('No artifacts extracted.','No investigation loaded.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>')); if(S.loading.artifacts)return page('Artifacts','Review extracted forensic artifacts by category.','<section class="data-panel">'+Array.from({length:8},()=>'<div class="skeleton skeleton-line"></div>').join('')+'</section>'); const q=S.filters.artifactQuery.toLowerCase(),tp=S.filters.artifactType; const items=S.artifacts.filter(x=>(tp==='all'||String(x.type||'').toLowerCase()===tp)&&(!q||JSON.stringify(x).toLowerCase().includes(q))); const rows=items.map(x=>`<tr><td>${esc(x.type||'Unknown')}</td><td>${esc(x.title||x.value||'Untitled Artifact')}</td><td>${esc(x.source||x.origin||'Unavailable')}</td><td>${esc(fmt(x.timestamp||x.createdAt)||'Unavailable')}</td><td>${esc(x.detail||x.description||'No additional details')}</td></tr>`).join(''); return page('Artifacts','Search, sort, filter, and inspect extracted artifact data from the backend.',`<section class="content-section"><div class="table-toolbar"><input class="search-input" id="artifactQuery" placeholder="Search artifacts" value="${esc(S.filters.artifactQuery)}"><select class="select-input" id="artifactType"><option value="all">All artifact types</option>${TYPES.map(([k,l])=>`<option value="${k}" ${S.filters.artifactType===k?'selected':''}>${l}</option>`).join('')}</select><select class="select-input" id="artifactSort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="type">Type</option></select></div></section>${note(S.errors.artifacts)}${items.length?`<section class="data-panel"><div class="table-meta">Showing ${items.length} artifacts</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Type</th><th>Title</th><th>Source</th><th>Timestamp</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table></div></section>`:empty('No artifacts extracted.','No artifact data is available for the current filters or investigation.')}`)}
 function ent(){if(!S.investigation)return page('Entities','Entity extraction results appear after processing.',empty('No entities extracted.','No investigation loaded.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>')); if(S.loading.entities)return page('Entities','Entity extraction results appear after processing.','<section class="data-panel">'+Array.from({length:8},()=>'<div class="skeleton skeleton-line"></div>').join('')+'</section>'); const q=S.filters.entityQuery.toLowerCase(),p=S.filters.entityPriority; const items=S.entities.filter(x=>(p==='all'||String(x.priority||'')===p)&&(!q||JSON.stringify(x).toLowerCase().includes(q))); const rows=items.map((x,i)=>`<tr class="entity-row" data-i="${i}"><td>${esc(x.type||'Unknown')}</td><td>${esc(x.value||x.name||'Unknown')}</td><td>${esc(x.frequency??x.count??'Unavailable')}</td><td>${esc(x.confidence??x.score??'Unavailable')}</td><td>${esc(x.evidenceSource||x.source||'Unavailable')}</td><td><span class="priority-badge priority-${String(x.priority||'low').toLowerCase()}">${esc(x.priority||'Unknown')}</span></td></tr>`).join(''); return page('Entities','Click an entity row to open the evidence details panel.',`<section class="content-section"><div class="table-toolbar"><input class="search-input" id="entityQuery" placeholder="Search entities" value="${esc(S.filters.entityQuery)}"><select class="select-input" id="entityPriority"><option value="all">All priorities</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select><button class="btn" id="reloadEntities" type="button">Retry</button></div></section>${note(S.errors.entities)}${items.length?`<section class="data-panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Entity Type</th><th>Value</th><th>Frequency</th><th>Confidence</th><th>Evidence Source</th><th>Priority</th></tr></thead><tbody>${rows}</tbody></table></div></section>`:empty('No entities extracted.','No entity data is available for the current filters or investigation.')}`)}
-function corr(){if(!S.investigation)return page('Correlation Graph','The graph displays only when backend data exists.',empty('No evidence relationships available.','No investigation loaded.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>')); if(S.loading.correlation)return page('Correlation Graph','The graph displays only when backend data exists.','<section class="graph-stage"><div class="skeleton" style="height:560px"></div></section>'); return page('Correlation Graph','People and relationships come directly from the backend Evidence Correlation Engine.',`<section class="content-section"><div class="graph-toolbar" style="grid-template-columns:1fr auto auto auto"><input class="search-input" id="graphQuery" placeholder="Search people" value="${esc(S.filters.graphQuery)}"><button class="btn" id="fitViewBtn" type="button">Fit View</button><button class="btn" id="zoomIn" type="button">Zoom In</button><button class="btn" id="zoomOut" type="button">Zoom Out</button></div><div class="graph-filter-bar"><label><input type="checkbox" class="entity-type-filter" value="person" ${S.filters.graphEntityTypes.includes('person')?'checked':''}> Person</label><label><input type="checkbox" class="entity-type-filter" value="phone" ${S.filters.graphEntityTypes.includes('phone')?'checked':''}> Phone</label><label><input type="checkbox" class="entity-type-filter" value="email" ${S.filters.graphEntityTypes.includes('email')?'checked':''}> Email</label><label><input type="checkbox" class="entity-type-filter" value="gps" ${S.filters.graphEntityTypes.includes('gps')?'checked':''}> GPS</label><label><input type="checkbox" class="entity-type-filter" value="url" ${S.filters.graphEntityTypes.includes('url')?'checked':''}> URL</label><div style="width:1px;height:16px;background:var(--border);margin:0 0.5rem"></div><label>Min Score <input type="range" id="graphMinScore" min="0" max="1" step="0.05" value="${S.filters.graphMinScore}"><span class="score-label" id="scoreLabel">${S.filters.graphMinScore.toFixed(2)}</span></label><div style="width:1px;height:16px;background:var(--border);margin:0 0.5rem"></div><label>Type: <select class="select-input" id="graphRelType" style="padding:0.4rem;width:auto"><option value="all" ${S.filters.graphRelType==='all'?'selected':''}>All</option><option value="association" ${S.filters.graphRelType==='association'?'selected':''}>Association</option><option value="correlation" ${S.filters.graphRelType==='correlation'?'selected':''}>Correlation</option></select></label></div></section>${note(S.errors.correlation)}${S.graph?.nodes?.length?`<section class="graph-stage"><div class="graph-help">Edge thickness follows the backend score. Click a node to inspect attached evidence.</div><div class="graph-canvas-wrap" id="graphWrap" style="margin-top:1rem;"><canvas id="wecaGraphCanvas" class="weca-graph-canvas"></canvas><div id="graphNodeTooltip" class="graph-node-tooltip" style="display:none"></div><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span><span>Person</span></div><div class="legend-item"><span class="legend-dot" style="background:#38bdf8"></span><span>Phone</span></div><div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span><span>Email</span></div><div class="legend-item"><span class="legend-dot" style="background:#2dd4bf"></span><span>GPS</span></div><div class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span><span>URL</span></div><div class="legend-item" style="margin-left:1rem"><span class="legend-line"></span><span>Association</span></div><div class="legend-item"><span class="legend-line dashed"></span><span>Correlation</span></div></div></div></section>`:empty('No evidence relationships available.','Graph data is unavailable until the backend returns evidence-backed people and relationships.')}`)}
+function corr(){if(!S.investigation)return page('Correlation Graph','The graph displays only when backend data exists.',empty('No evidence relationships available.','No investigation loaded.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>')); if(S.loading.correlation)return page('Correlation Graph','The graph displays only when backend data exists.','<section class="graph-stage"><div class="skeleton" style="height:560px"></div></section>'); return page('Correlation Graph','People and relationships come directly from the backend Evidence Correlation Engine.',`<section class="content-section"><div class="graph-toolbar" style="grid-template-columns:1fr auto auto auto"><input class="search-input" id="graphQuery" placeholder="Search people" value="${esc(S.filters.graphQuery)}"><button class="btn" id="fitViewBtn" type="button">Fit View</button><button class="btn" id="zoomIn" type="button">Zoom In</button><button class="btn" id="zoomOut" type="button">Zoom Out</button></div><div class="graph-filter-bar"><label><input type="checkbox" class="entity-type-filter" value="person" ${S.filters.graphEntityTypes.includes('person')?'checked':''}> Person</label><label><input type="checkbox" class="entity-type-filter" value="phone" ${S.filters.graphEntityTypes.includes('phone')?'checked':''}> Phone</label><label><input type="checkbox" class="entity-type-filter" value="email" ${S.filters.graphEntityTypes.includes('email')?'checked':''}> Email</label><label><input type="checkbox" class="entity-type-filter" value="gps" ${S.filters.graphEntityTypes.includes('gps')?'checked':''}> GPS</label><label><input type="checkbox" class="entity-type-filter" value="url" ${S.filters.graphEntityTypes.includes('url')?'checked':''}> URL</label><div style="width:1px;height:16px;background:var(--border);margin:0 0.5rem"></div><label>Min Score <input type="range" id="graphMinScore" min="0" max="1" step="0.05" value="${S.filters.graphMinScore}"><span class="score-label" id="scoreLabel">${S.filters.graphMinScore.toFixed(2)}</span></label><div style="width:1px;height:16px;background:var(--border);margin:0 0.5rem"></div><label>Type: <select class="select-input" id="graphRelType" style="padding:0.4rem;width:auto"><option value="all" ${S.filters.graphRelType==='all'?'selected':''}>All</option><option value="association" ${S.filters.graphRelType==='association'?'selected':''}>Association</option><option value="correlation" ${S.filters.graphRelType==='correlation'?'selected':''}>Correlation</option></select></label></div></section>${note(S.errors.correlation)}${S.graph?.nodes?.length?`<section class="graph-stage">${getGraphSummary()}<div class="graph-help">Edge thickness follows the backend score. Click a node or edge to inspect details.</div><div class="graph-canvas-wrap" id="graphWrap" style="margin-top:1rem;"><canvas id="wecaGraphCanvas" class="weca-graph-canvas"></canvas><div id="graphNodeTooltip" class="graph-node-tooltip" style="display:none"></div><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span><span>Person</span></div><div class="legend-item"><span class="legend-dot" style="background:#38bdf8"></span><span>Phone</span></div><div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span><span>Email</span></div><div class="legend-item"><span class="legend-dot" style="background:#2dd4bf"></span><span>GPS</span></div><div class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span><span>URL</span></div><div class="legend-item" style="margin-left:1rem"><span class="legend-line"></span><span>Association</span></div><div class="legend-item"><span class="legend-line dashed"></span><span>Correlation</span></div></div></div></section>`:empty('No evidence relationships available.','Graph data is unavailable until the backend returns evidence-backed people and relationships.')}`)}
 function rep(){return !S.investigation?page('Reports','Report generation appears here once backend support is available.',empty('No reports generated.','No investigation loaded.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>')):page('Reports','Generate, review, and download reports from backend-supported outputs only.',`<section class="content-section"><div class="report-actions" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));"><button class="btn" disabled>Generate Report</button><button class="btn" disabled>Download PDF</button></div></section>${S.reports.length?`<section class="data-panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Generated</th><th>Status</th><th>Summary</th></tr></thead><tbody>${S.reports.map(x=>`<tr><td>${esc(x.name||x.title||'Report')}</td><td>${esc(fmt(x.generatedAt||x.createdAt)||'Unavailable')}</td><td>${esc(x.status||'Available')}</td><td>${esc(x.summary||'Investigation summary')}</td></tr>`).join('')}</tbody></table></div></section>`:empty('No reports generated.','Report generation will be available after investigation processing.')}`)}
 function render(){S.route=getRoute(); updateShell(); $('#appContent').innerHTML=({dashboard:dash,upload:upload,artifacts:art,entities:ent,correlation:corr,reports:rep}[S.route])(); bind(); graph()}
-function bind(){ $('#retryBtn')?.addEventListener('click',()=>load(S.route)); $('#artifactQuery')?.addEventListener('input',e=>{S.filters.artifactQuery=e.target.value;render()}); $('#artifactType')?.addEventListener('change',e=>{S.filters.artifactType=e.target.value;render()}); $('#entityQuery')?.addEventListener('input',e=>{S.filters.entityQuery=e.target.value;render()}); $('#entityPriority')?.addEventListener('change',e=>{S.filters.entityPriority=e.target.value;render()}); $('#reloadEntities')?.addEventListener('click',()=>load('entities')); $$('.entity-row').forEach(r=>r.addEventListener('click',()=>panel(S.entities[+r.dataset.i]))); const f=$('#ufdrFile'),d=$('#dropzone'); if(f&&d){['dragenter','dragover'].forEach(n=>d.addEventListener(n,e=>{e.preventDefault();d.classList.add('dragover')})); ['dragleave','drop'].forEach(n=>d.addEventListener(n,e=>{e.preventDefault();d.classList.remove('dragover')})); d.addEventListener('drop',e=>e.dataTransfer?.files?.[0]&&send(e.dataTransfer.files[0])); f.addEventListener('change',e=>e.target.files?.[0]&&send(e.target.files[0])); $('#refreshBtn')?.addEventListener('click',async()=>{await loadInv(); if(S.investigation) location.hash='#/dashboard'})} $('#graphQuery')?.addEventListener('input',e=>{S.filters.graphQuery=e.target.value;graph()}); $('#zoomIn')?.addEventListener('click',()=>{view.scale=Math.min(2.5,view.scale+.15);graph()}); $('#zoomOut')?.addEventListener('click',()=>{view.scale=Math.max(.6,view.scale-.15);graph()}); $('#fitViewBtn')?.addEventListener('click',()=>{fitView();graph()}); $$('.entity-type-filter').forEach(cb=>cb.addEventListener('change',e=>{const s=new Set(S.filters.graphEntityTypes); if(e.target.checked)s.add(e.target.value); else s.delete(e.target.value); S.filters.graphEntityTypes=[...s]; graph()})); $('#graphMinScore')?.addEventListener('input',e=>{S.filters.graphMinScore=parseFloat(e.target.value); const lbl=$('#scoreLabel'); if(lbl)lbl.textContent=S.filters.graphMinScore.toFixed(2); graph()}); $('#graphRelType')?.addEventListener('change',e=>{S.filters.graphRelType=e.target.value; graph()})}
+function bind(){ $('#retryBtn')?.addEventListener('click',()=>load(S.route)); $('#artifactQuery')?.addEventListener('input',e=>{S.filters.artifactQuery=e.target.value;render()}); $('#artifactType')?.addEventListener('change',e=>{S.filters.artifactType=e.target.value;render()}); $('#entityQuery')?.addEventListener('input',e=>{S.filters.entityQuery=e.target.value;render()}); $('#entityPriority')?.addEventListener('change',e=>{S.filters.entityPriority=e.target.value;render()}); $('#reloadEntities')?.addEventListener('click',()=>load('entities')); $$('.entity-row').forEach(r=>r.addEventListener('click',()=>panel(S.entities[+r.dataset.i]))); const f=$('#ufdrFile'),d=$('#dropzone'); if(f&&d){['dragenter','dragover'].forEach(n=>d.addEventListener(n,e=>{e.preventDefault();d.classList.add('dragover')})); ['dragleave','drop'].forEach(n=>d.addEventListener(n,e=>{e.preventDefault();d.classList.remove('dragover')})); d.addEventListener('drop',e=>e.dataTransfer?.files?.[0]&&send(e.dataTransfer.files[0])); f.addEventListener('change',e=>e.target.files?.[0]&&send(e.target.files[0])); $('#refreshBtn')?.addEventListener('click',async()=>{await loadInv(); if(S.investigation) location.hash='#/dashboard'})} $('#graphQuery')?.addEventListener('input',e=>{S.filters.graphQuery=e.target.value; if(S.filters.graphQuery){const q=S.filters.graphQuery.toLowerCase();const m=simNodes.find(n=>n.label.toLowerCase().includes(q));if(m){const c=$('#wecaGraphCanvas');if(c){view.x=(c.clientWidth/2)-m.x*view.scale;view.y=(c.clientHeight/2)-m.y*view.scale;}}} graph()}); $('#zoomIn')?.addEventListener('click',()=>{view.scale=Math.min(2.5,view.scale+.15);graph()}); $('#zoomOut')?.addEventListener('click',()=>{view.scale=Math.max(.6,view.scale-.15);graph()}); $('#fitViewBtn')?.addEventListener('click',()=>{fitView();graph()}); $$('.entity-type-filter').forEach(cb=>cb.addEventListener('change',e=>{const s=new Set(S.filters.graphEntityTypes); if(e.target.checked)s.add(e.target.value); else s.delete(e.target.value); S.filters.graphEntityTypes=[...s]; graph()})); $('#graphMinScore')?.addEventListener('input',e=>{S.filters.graphMinScore=parseFloat(e.target.value); const lbl=$('#scoreLabel'); if(lbl)lbl.textContent=S.filters.graphMinScore.toFixed(2); graph()}); $('#graphRelType')?.addEventListener('change',e=>{S.filters.graphRelType=e.target.value; graph()})}
 function panel(x){
   if(!x)return; 
   const name=x.value||x.name||'Entity'; 
@@ -57,10 +77,45 @@ function panel(x){
     return `<section class="panel-card"><div class="panel-label">${esc(k.replace(/_/g,' ').toUpperCase())}</div>${listHtml}</section>`;
   }).join('');
   
-  $('#panelAvatar').textContent=String(name).split(/\s+/).map(a=>a[0]).join('').slice(0,2).toUpperCase(); 
+  $('#panelAvatar').textContent=x.isEdge?'↔':String(name).split(/\s+/).map(a=>a[0]).join('').slice(0,2).toUpperCase(); 
   $('#panelEntityName').textContent=name; 
-  $('#panelEntityMeta').textContent=`${x.type||'Unknown'} | ${x.priority||'Unknown priority'}`; 
-  $('#panelBody').innerHTML=`<section class="panel-card"><div class="panel-label">OVERVIEW</div><div class="evidence-list" style="margin-top:0.5rem"><div class="evidence-row"><span>Correlation Score</span><strong>${esc(scoreVal)}</strong></div><div class="evidence-row"><span>Priority</span><strong>${esc(x.priority||'Unavailable')}</strong></div><div class="evidence-row"><span>Active Evidence Categories</span><strong>${validDetails.length}</strong></div></div></section>${groups}`; 
+  $('#panelEntityMeta').textContent=x.isEdge?'Correlation':`${x.type||'Unknown'} | ${x.priority||'Unknown priority'}`; 
+
+  if(x.isEdge){
+    const e=x.edgeData||{};
+    let p=e.score>=0.8?'High':e.score>=0.5?'Medium':'Low';
+    let w=`<span class="priority-badge priority-${p.toLowerCase()}">${p}</span> (${(e.score||0).toFixed(2)})`;
+    let res=e.reasons&&e.reasons.length?e.reasons.join('<br>'):'Correlated by engine.';
+    let ev=e.label||e.relationship||'Unknown';
+    $('#panelBody').innerHTML=`<section class="panel-card"><div class="panel-label">RELATIONSHIP DETAILS</div><div class="evidence-list" style="margin-top:0.5rem"><div class="evidence-row"><span>WECA Score</span><strong>${w}</strong></div><div class="evidence-row"><span>Shared Evidence</span><strong>${esc(ev)}</strong></div><div class="evidence-row" style="flex-direction:column;align-items:flex-start;gap:6px"><span>Reason</span><div style="font-weight:500;line-height:1.4">${esc(res)}</div></div></div></section>${groups}`;
+  } else {
+    let extraHtml = '';
+    if(x.type === 'person' && S.graph?.edges) {
+       const evEdges = S.graph.edges.filter(e=>(e.source===x.id||e.from===x.id) && (e.relationship==='owns'||e.relationship==='visited'));
+       if(evEdges.length>0){
+          let evCounts = {};
+          evEdges.forEach(e=>{
+             const tN = (S.graph.nodes||[]).find(n=>n.id===(e.target||e.to));
+             if(tN) { evCounts[tN.type] = (evCounts[tN.type]||0)+1; }
+          });
+          let evList = Object.entries(evCounts).map(([k,v])=>`<div class="evidence-row"><span style="text-transform:capitalize">${esc(k)}s</span><strong>${v}</strong></div>`).join('');
+          extraHtml += `<section class="panel-card"><div class="panel-label">EVIDENCE COUNT</div><div class="evidence-list" style="margin-top:0.5rem">${evList}</div></section>`;
+       }
+       const conns = S.graph.edges.filter(e=>(e.source===x.id||e.from===x.id||e.target===x.id||e.to===x.id) && e.score>0 && e.relationship!=='owns'&&e.relationship!=='visited');
+       if(conns.length>0){
+          let cList = conns.map(e=>{
+             const oId = (e.source===x.id||e.from===x.id) ? (e.target||e.to) : (e.source||e.from);
+             const oNode = (S.graph.nodes||[]).find(n=>n.id===oId);
+             let lbl = e.label||e.relationship;
+             return `<div style="padding:6px 0;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.05);"><span style="color:var(--primary)">•</span> <strong>${esc(oNode?oNode.label||oNode.name:oId)}</strong> <span style="color:var(--text-secondary);font-size:0.85em;margin-left:auto;background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px">${esc(lbl)}</span></div>`;
+          }).join('');
+          extraHtml += `<section class="panel-card"><div class="panel-label">CONNECTED PEOPLE</div><div style="margin-top:0.5rem">${cList}</div></section>`;
+       }
+    }
+    let p=(x.priority||'').toLowerCase(); p=p==='high'||p==='medium'||p==='low'?p:'low';
+    let pB=`<span class="priority-badge priority-${p}">${esc(x.priority||'Unavailable')}</span>`;
+    $('#panelBody').innerHTML=`<section class="panel-card"><div class="panel-label">OVERVIEW</div><div class="evidence-list" style="margin-top:0.5rem"><div class="evidence-row"><span>Correlation Score</span><strong>${esc(scoreVal)}</strong></div><div class="evidence-row"><span>Priority</span><strong>${pB}</strong></div><div class="evidence-row"><span>Active Evidence Categories</span><strong>${validDetails.length}</strong></div></div></section>${extraHtml}${groups}`; 
+  }
   $('#evidencePanel').classList.add('open'); 
   $('#panelOverlay').classList.add('active'); 
   document.body.style.overflow='hidden'
@@ -167,6 +222,7 @@ function graph(){
     return true;
   });
   hits=[];
+  let edgeHits=[];
   
   visE.forEach(e=>{
     const a=e.sourceNode,b=e.targetNode,ax=view.x+a.x*view.scale,ay=view.y+a.y*view.scale,bx=view.x+b.x*view.scale,by=view.y+b.y*view.scale;
@@ -194,6 +250,14 @@ function graph(){
     ctx.beginPath();ctx.arc(nx,ny,sr+4*view.scale,0,Math.PI*2);ctx.fillStyle=st.fill;ctx.globalAlpha=0.15*opacity;ctx.fill();ctx.globalAlpha=opacity;
     ctx.beginPath();ctx.arc(nx,ny,sr,0,Math.PI*2);ctx.fillStyle=st.fill;ctx.fill();
     ctx.beginPath();ctx.arc(nx,ny,sr,0,Math.PI*2);ctx.strokeStyle=st.stroke;ctx.lineWidth=2*view.scale;ctx.stroke();
+    if(n.type==='person'&&n.data?.priority){
+       const p=String(n.data.priority).toLowerCase();
+       if(p==='high'||p==='medium'){
+          ctx.beginPath();ctx.arc(nx,ny,sr+6*view.scale,0,Math.PI*2);
+          ctx.strokeStyle=p==='high'?'#ef4444':'#f59e0b';
+          ctx.lineWidth=3*view.scale;ctx.stroke();
+       }
+    }
     ctx.fillStyle='#fff';
     const iS=sr*0.5;
     ctx.save();ctx.translate(nx,ny);ctx.beginPath();
@@ -217,11 +281,14 @@ function graph(){
     const lbl=e.label||e.relationship;
     if(lbl){
       ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
-      let text = lbl.replace(/Shared\s+/i, '');
+      let cleanLbl = lbl.replace(/Shared\s+/i, '');
+      const pText = e.score>=0.8?'High':e.score>=0.5?'Medium':'Low';
+      const text = (e.score > 0 && e.relationship !== 'owns' && e.relationship !== 'visited') ? `${pText} (${e.score.toFixed(2)})` : cleanLbl;
       const metrics = ctx.measureText(text);
       const tw = metrics.width + 12*view.scale;
       const th = 16*view.scale;
       const cx = (ax+bx)/2, cy = (ay+by)/2 - 6*view.scale;
+      edgeHits.push({e,ax,ay,bx,by,width:Math.max(8,e.score*6*view.scale)});
       ctx.fillStyle = '#0f172a';
       ctx.beginPath(); 
       ctx.roundRect(cx - tw/2, cy - th/1.4, tw, th, 4*view.scale); 
@@ -231,6 +298,8 @@ function graph(){
       ctx.stroke();
       ctx.fillStyle='rgba(226,234,244,.95)';
       ctx.fillText(text,cx,cy);
+    } else {
+      edgeHits.push({e,ax,ay,bx,by,width:Math.max(8,e.score*6*view.scale)});
     }
     ctx.globalAlpha=1;
   });
@@ -262,17 +331,23 @@ function graph(){
     if(h){dragNode=h.n;dragNode.fixed=true;return;}
     window.dragPan=true;window.lastPan={x:e.clientX,y:e.clientY};
   };
+  const distToSeg=(p,v,w)=>{const l2=(v.x-w.x)**2+(v.y-w.y)**2; if(l2===0)return Math.hypot(p.x-v.x,p.y-v.y); let t=((p.x-v.x)*(w.x-v.x)+(p.y-v.y)*(w.y-v.y))/l2; t=Math.max(0,Math.min(1,t)); return Math.hypot(p.x-(v.x+t*(w.x-v.x)),p.y-(v.y+t*(w.y-v.y)));};
   c.onclick=e=>{
     const b=c.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top,h=hits.find(a=>Math.hypot(a.x-x,a.y-y)<=a.r);
     if(h&&!dragNode){
       if(window.selectedNodeId === h.n.id) window.selectedNodeId = null;
       else window.selectedNodeId = h.n.id;
-      panel({name:h.n.label,type:h.n.type,priority:h.n.data?.priority||'low',evidenceDetails:h.n.data?.evidence||(h.n.data?.entity?.evidenceDetails)||{},score:h.n.data?.score||0});
+      panel({name:h.n.label,type:h.n.type,priority:h.n.data?.priority||'low',evidenceDetails:h.n.data?.evidence||(h.n.data?.entity?.evidenceDetails)||{},score:h.n.data?.score||0,id:h.n.id,isEdge:false});
       graph();
     }else if(!dragNode){
-      window.selectedNodeId = null;
-      closePanel();
-      graph();
+      const eh = edgeHits.find(eh=>distToSeg({x,y},{x:eh.ax,y:eh.ay},{x:eh.bx,y:eh.by})<=eh.width/2+4);
+      if(eh){
+        panel({name:`${eh.e.sourceNode.label||eh.e.sourceNode.id} ↔ ${eh.e.targetNode.label||eh.e.targetNode.id}`,type:'Relationship',priority:eh.e.priority||'medium',evidenceDetails:{},score:eh.e.score,isEdge:true,edgeData:eh.e});
+      }else{
+        window.selectedNodeId = null;
+        closePanel();
+        graph();
+      }
     }
   };
   window.onmouseup=()=>{if(dragNode)releaseNode(dragNode); window.dragPan=false;};
