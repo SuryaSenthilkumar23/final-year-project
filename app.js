@@ -155,16 +155,17 @@ function graph(){
     fitView();
   }
 
+  const allowedTypes=new Set(S.filters.graphEntityTypes);
+  const visN=simNodes.filter(n=>allowedTypes.has(n.type));
+  const visNIds=new Set(visN.map(n=>n.id));
   const visE=simEdges.filter(e=>{
+    if(!visNIds.has(e.source)||!visNIds.has(e.target))return false;
     if(e.score<S.filters.graphMinScore)return false;
     const isAssoc=!e.relationship?.startsWith('shared_');
     if(S.filters.graphRelType==='association'&&!isAssoc)return false;
     if(S.filters.graphRelType==='correlation'&&isAssoc)return false;
     return true;
   });
-  const allowedTypes=new Set(S.filters.graphEntityTypes), hasVisEdge=new Set();
-  visE.forEach(e=>{hasVisEdge.add(e.source);hasVisEdge.add(e.target)});
-  const visN=simNodes.filter(n=>allowedTypes.has(n.type)||hasVisEdge.has(n.id));
   hits=[];
   
   visE.forEach(e=>{
