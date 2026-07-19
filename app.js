@@ -96,12 +96,22 @@ function graph(){
   if(window.lastGraphNodes !== S.graph.nodes) { window.lastGraphNodes = S.graph.nodes; simDirty = true; }
   
   function runSim(nodes,edges,iters,width,height){
+    const cx = width/2, cy = height/2;
+    nodes.forEach((n,i) => {
+       if(!n.initialized) {
+           const angle = (i/nodes.length) * Math.PI * 2;
+           const radius = 200 + Math.random()*100;
+           n.x = cx + Math.cos(angle)*radius;
+           n.y = cy + Math.sin(angle)*radius;
+           n.initialized = true;
+       }
+    });
     for(let i=0;i<iters;i++){
       const alpha=0.3*(1-i/iters);
       for(let j=0;j<nodes.length;j++){
         for(let k=j+1;k<nodes.length;k++){
           const a=nodes[j],b=nodes[k],dx=b.x-a.x,dy=b.y-a.y;
-          const dist=Math.sqrt(dx*dx+dy*dy)||1,f=3000/(dist*dist),fx=(dx/dist)*f*alpha,fy=(dy/dist)*f*alpha;
+          const dist=Math.sqrt(dx*dx+dy*dy)||1,f=6000/(dist*dist),fx=(dx/dist)*f*alpha,fy=(dy/dist)*f*alpha;
           if(!a.fixed){a.vx-=fx;a.vy-=fy;}
           if(!b.fixed){b.vx+=fx;b.vy+=fy;}
         }
@@ -109,21 +119,21 @@ function graph(){
       edges.forEach(e=>{
         const a=e.sourceNode,b=e.targetNode,dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1;
         const isAssoc = !e.relationship || e.relationship === 'owns' || e.relationship === 'visited';
-        const restLen = isAssoc ? 180 : 350;
-        const f=(dist-restLen)*0.06;
+        const restLen = isAssoc ? 220 : 450;
+        const f=(dist-restLen)*0.08;
         const fx=(dx/dist)*f*alpha,fy=(dy/dist)*f*alpha;
         if(!a.fixed){a.vx+=fx;a.vy+=fy;}
         if(!b.fixed){b.vx-=fx;b.vy-=fy;}
       });
       nodes.forEach(n=>{
         if(!n.fixed){
-          n.vx+=((width/2)-n.x)*0.005*alpha; n.vy+=((height/2)-n.y)*0.005*alpha;
-          n.vx*=0.80; n.vy*=0.80; n.x+=n.vx; n.y+=n.vy;
+          n.vx+=((width/2)-n.x)*0.003*alpha; n.vy+=((height/2)-n.y)*0.003*alpha;
+          n.vx*=0.75; n.vy*=0.75; n.x+=n.vx; n.y+=n.vy;
         }
       });
       for(let j=0;j<nodes.length;j++){
         for(let k=j+1;k<nodes.length;k++){
-          const a=nodes[j],b=nodes[k],dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1,minD=a.r+b.r+25;
+          const a=nodes[j],b=nodes[k],dx=b.x-a.x,dy=b.y-a.y,dist=Math.sqrt(dx*dx+dy*dy)||1,minD=a.r+b.r+80;
           if(dist<minD){
             const push=(minD-dist)/2,px=(dx/dist)*push,py=(dy/dist)*push;
             if(!a.fixed){a.x-=px;a.y-=py;}
@@ -135,10 +145,10 @@ function graph(){
   }
 
   if(simDirty){
-    simNodes=S.graph.nodes.map(n=>({id:n.id,type:n.type||'other',label:n.label||n.name||n.id||'Node',x:Math.random()*W,y:Math.random()*H,vx:0,vy:0,r:(NODE_STYLES[n.type]?.r||14),fixed:false,data:n}));
+    simNodes=S.graph.nodes.map(n=>({id:n.id,type:n.type||'other',label:n.label||n.name||n.id||'Node',x:0,y:0,vx:0,vy:0,r:(NODE_STYLES[n.type]?.r||14),fixed:false,initialized:false,data:n}));
     const find=id=>simNodes.find(n=>String(n.id)===String(id));
     simEdges=(S.graph.edges||[]).map(e=>{const a=find(e.source||e.from),b=find(e.target||e.to);if(!a||!b)return null;let rel=e.relationship||'association',lbl=e.label||'',rs=e.reasons||[];if(e.contributions?.length){rel=e.contributions[0].relationship||rel;lbl=Array.from(new Set(e.contributions.map(c=>c.relationship))).join(', ');rs=e.contributions.map(c=>c.reason);}return {source:a.id,target:b.id,sourceNode:a,targetNode:b,relationship:rel,score:Number(e.score||0),label:lbl,reasons:rs,data:e,priority:e.priority||'low'};}).filter(Boolean);
-    runSim(simNodes,simEdges,300,W,H);
+    runSim(simNodes,simEdges,400,W,H);
     simNodes.forEach(n => { n.staticX = n.x; n.staticY = n.y; n.vx = 0; n.vy = 0; });
     simDirty=false;
     fitView();
@@ -168,9 +178,21 @@ function graph(){
     ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]);
     const lbl=e.label||e.relationship;
     if(lbl){
-      ctx.fillStyle='rgba(226,234,244,.85)';ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
+      ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
       const text = (e.score > 0 && e.relationship !== 'owns' && e.relationship !== 'visited') ? `${lbl} (${e.score.toFixed(2)})` : lbl;
-      ctx.fillText(text,(ax+bx)/2,(ay+by)/2-6*view.scale);
+      const metrics = ctx.measureText(text);
+      const tw = metrics.width + 12*view.scale;
+      const th = 16*view.scale;
+      const cx = (ax+bx)/2, cy = (ay+by)/2 - 6*view.scale;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); 
+      ctx.roundRect(cx - tw/2, cy - th/1.4, tw, th, 4*view.scale); 
+      ctx.fill();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle='rgba(226,234,244,.95)';
+      ctx.fillText(text,cx,cy);
     }
   });
   
