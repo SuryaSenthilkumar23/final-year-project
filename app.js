@@ -100,8 +100,9 @@ function graph(){
   if(simDirty){
     simNodes=S.graph.nodes.map(n=>({id:n.id,type:n.type||'other',label:n.label||n.name||n.id||'Node',x:Math.random()*W,y:Math.random()*H,vx:0,vy:0,r:(NODE_STYLES[n.type]?.r||14),fixed:false,data:n}));
     const find=id=>simNodes.find(n=>String(n.id)===String(id));
-    simEdges=(S.graph.edges||[]).map(e=>{const a=find(e.source||e.from),b=find(e.target||e.to);if(!a||!b)return null;let rel=e.relationship||'association',lbl=e.label||'',rs=e.reasons||[];if(e.contributions?.length){rel=e.contributions[0].relationship||rel;lbl=e.contributions.map(c=>`${c.relationship}: ${c.value}`).join(', ');rs=e.contributions.map(c=>c.reason);}return {source:a.id,target:b.id,sourceNode:a,targetNode:b,relationship:rel,score:Number(e.score||0),label:lbl,reasons:rs,data:e,priority:e.priority||'low'};}).filter(Boolean);
+    simEdges=(S.graph.edges||[]).map(e=>{const a=find(e.source||e.from),b=find(e.target||e.to);if(!a||!b)return null;let rel=e.relationship||'association',lbl=e.label||'',rs=e.reasons||[];if(e.contributions?.length){rel=e.contributions[0].relationship||rel;lbl=Array.from(new Set(e.contributions.map(c=>c.relationship))).join(', ');rs=e.contributions.map(c=>c.reason);}return {source:a.id,target:b.id,sourceNode:a,targetNode:b,relationship:rel,score:Number(e.score||0),label:lbl,reasons:rs,data:e,priority:e.priority||'low'};}).filter(Boolean);
     runSim(simNodes,simEdges,300,W,H);
+    simNodes.forEach(n => { n.staticX = n.x; n.staticY = n.y; n.vx = 0; n.vy = 0; });
     simDirty=false;
     fitView();
   }
@@ -128,10 +129,11 @@ function graph(){
       ctx.strokeStyle=nodeColor(e.priority); ctx.lineWidth=Math.max(1,e.score*6)*view.scale; ctx.globalAlpha=0.5+e.score*0.5; ctx.setLineDash([6*view.scale,6*view.scale]);
     }
     ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]);
-    const lbl=e.label||(e.reasons||[]).slice(0,2).join(', ');
+    const lbl=e.label||e.relationship;
     if(lbl){
       ctx.fillStyle='rgba(226,234,244,.85)';ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
-      ctx.fillText(`${lbl} ${e.score.toFixed(2)}`,(ax+bx)/2,(ay+by)/2-6*view.scale);
+      const text = (e.score > 0 && e.relationship !== 'owns' && e.relationship !== 'visited') ? `${lbl} (${e.score.toFixed(2)})` : lbl;
+      ctx.fillText(text,(ax+bx)/2,(ay+by)/2-6*view.scale);
     }
   });
   
@@ -161,7 +163,7 @@ function graph(){
     const b=c.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;
     if(dragNode){
       dragNode.x=(x-view.x)/view.scale; dragNode.y=(y-view.y)/view.scale;
-      runSim(simNodes,simEdges,5,W,H); graph(); return;
+      graph(); return;
     }
     const h=hits.find(a=>Math.hypot(a.x-x,a.y-y)<=a.r);
     if(!h){t.style.display='none';c.style.cursor='default';return;}
@@ -169,7 +171,16 @@ function graph(){
     t.innerHTML=`<strong>${esc(h.n.label||h.n.id)}</strong><div class="status-text">${esc(h.n.type||'Node')}</div>`;
     c.style.cursor='pointer';
   };
-  c.onmouseleave=()=>{t.style.display='none';if(dragNode){dragNode.fixed=false;dragNode=null;}};
+  const releaseNode=(n)=>{
+    if(!n)return;
+    const animate=()=>{
+      n.x+=(n.staticX-n.x)*0.2; n.y+=(n.staticY-n.y)*0.2; graph();
+      if(Math.abs(n.x-n.staticX)>0.5||Math.abs(n.y-n.staticY)>0.5){requestAnimationFrame(animate);}
+      else{n.x=n.staticX;n.y=n.staticY;graph();}
+    };
+    animate(); n.fixed=false; dragNode=null;
+  };
+  c.onmouseleave=()=>{t.style.display='none';if(dragNode)releaseNode(dragNode);};
   c.onmousedown=e=>{
     const b=c.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top,h=hits.find(a=>Math.hypot(a.x-x,a.y-y)<=a.r);
     if(h){dragNode=h.n;dragNode.fixed=true;return;}
@@ -179,7 +190,7 @@ function graph(){
     const b=c.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top,h=hits.find(a=>Math.hypot(a.x-x,a.y-y)<=a.r);
     if(h&&!dragNode){panel({name:h.n.label,type:h.n.type,priority:h.n.data?.priority||'low',evidenceDetails:h.n.data?.evidence||(h.n.data?.entity?.evidenceDetails)||{},score:h.n.data?.score||0});}
   };
-  window.onmouseup=()=>{if(dragNode){dragNode.fixed=false;dragNode=null;} window.dragPan=false;};
+  window.onmouseup=()=>{if(dragNode)releaseNode(dragNode); window.dragPan=false;};
   window.onmousemove=e=>{
     if(!window.dragPan||S.route!=='correlation')return;
     view.x+=e.clientX-window.lastPan.x;view.y+=e.clientY-window.lastPan.y;
