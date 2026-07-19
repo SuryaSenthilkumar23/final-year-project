@@ -1,6 +1,6 @@
 :root {
   --bg-base:#080e1a;--bg-surface:#0d1628;--bg-card:#111e35;--bg-card-hover:#162440;--bg-elevated:#1a2d4a;--bg-input:#0a1525;
-  --blue:#38bdf8;--purple:#a78bfa;--cyan:#22d3ee;--teal:#2dd4bf;--indigo:#818cf8;--orange:#fb923c;--green:#4ade80;--yellow:#fbbf24;
+  --blue:#38bdf8;--purple:#a78bfa;--cyan:#22d3ee;--teal:#2dd4bf;--indigo:#818cf8;--orange:#fb923c;--green:#4ade80;--yellow:#fbbf24;--primary:var(--blue);
   --text-primary:#e2eaf4;--text-secondary:#8ba3c7;--text-muted:#4d6f99;--border:rgba(56,189,248,0.12);--border-med:rgba(56,189,248,0.22);
   --shadow-md:0 4px 24px rgba(0,0,0,0.5);--sidebar-w:260px;--transition:0.22s cubic-bezier(0.4,0,0.2,1);
 }
