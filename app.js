@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)], R
 const getRoute=()=>{const r=(location.hash||'#/dashboard').replace(/^#\//,'');return ROUTES.includes(r)?r:'dashboard'};
 window.S={route:getRoute(),investigation:null,artifacts:[],entities:[],graph:null,reports:[],loading:{},errors:{},upload:{progress:0,processing:false,message:'',error:''},filters:{artifactQuery:'',artifactType:'all',artifactSort:'newest',entityQuery:'',entityPriority:'all',graphQuery:'',graphEntityTypes:['person','phone','email','gps','url'],graphMinScore:0,graphRelType:'all'}};
 const S=window.S; let hits=[],view={scale:1,x:0,y:0};
-const NODE_STYLES={person:{fill:'#4ade80',stroke:'#22c55e',r:26,icon:'person'},phone:{fill:'#38bdf8',stroke:'#0ea5e9',r:18,icon:'phone'},email:{fill:'#fb923c',stroke:'#f97316',r:18,icon:'email'},gps:{fill:'#2dd4bf',stroke:'#14b8a6',r:18,icon:'gps'},url:{fill:'#a78bfa',stroke:'#8b5cf6',r:16,icon:'url'},ip_address:{fill:'#f472b6',stroke:'#ec4899',r:16,icon:'ip'},device:{fill:'#94a3b8',stroke:'#64748b',r:16,icon:'device'},other:{fill:'#64748b',stroke:'#475569',r:14,icon:'other'}};
+const NODE_STYLES={person:{fill:'#4ade80',stroke:'#22c55e',r:36,icon:'person'},phone:{fill:'#38bdf8',stroke:'#0ea5e9',r:16,icon:'phone'},email:{fill:'#fb923c',stroke:'#f97316',r:16,icon:'email'},gps:{fill:'#2dd4bf',stroke:'#14b8a6',r:16,icon:'gps'},url:{fill:'#a78bfa',stroke:'#8b5cf6',r:14,icon:'url'},ip_address:{fill:'#f472b6',stroke:'#ec4899',r:14,icon:'ip'},device:{fill:'#94a3b8',stroke:'#64748b',r:14,icon:'device'},other:{fill:'#64748b',stroke:'#475569',r:12,icon:'other'}};
 let simNodes=[],simEdges=[],dragNode=null,simDirty=true;
 const cfg=()=>window.FORENSIAI_CONFIG||{apiBaseUrl:'',endpoints:{}};
 const api=k=>`${cfg().apiBaseUrl||''}${(cfg().endpoints||{})[k]||''}`;
@@ -69,6 +69,7 @@ function closePanel(){ $('#evidencePanel').classList.remove('open'); $('#panelOv
 async function send(file){S.upload={progress:5,processing:true,message:'',error:''}; render(); const fd=new FormData(); fd.append('file',file); try{const r=await new Promise((ok,bad)=>{const x=new XMLHttpRequest(); x.open('POST',api('upload')); x.responseType='json'; x.upload.addEventListener('progress',e=>{if(e.lengthComputable){S.upload.progress=Math.max(10,Math.round(e.loaded/e.total*100)); $('#uploadBar')&&($('#uploadBar').style.width=`${S.upload.progress}%`)}}); x.onload=()=>x.status>=200&&x.status<300?ok(x.response):bad(new Error(`Upload failed with status ${x.status}`)); x.onerror=()=>bad(new Error('Network error during upload.')); x.send(fd)}); S.upload.progress=100; S.upload.message=r?.message||'The backend accepted the UFDR upload.'; S.upload.processing=false; await loadInv(); await Promise.all(['artifacts','entities','correlation','reports'].map(load)); location.hash='#/dashboard'}catch(e){S.upload.processing=false; S.upload.error=e.message||'Unable to upload the UFDR report.'; render()}}
 const edgeEnds=e=>({from:e.from||e.source,to:e.to||e.target});
 const nodeColor=p=>{const v=String(p||'').toLowerCase(); return v.includes('high')?'#ef4444':v.includes('medium')?'#f59e0b':'#38bdf8'};
+const edgeColor=r=>{const v=String(r||'').toLowerCase(); return v.includes('phone')?'#38bdf8':v.includes('email')?'#fb923c':(v.includes('gps')||v.includes('location'))?'#2dd4bf':v.includes('url')?'#a78bfa':'#4ade80'};
 function fitView(){
   if(!simNodes.length)return;
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
@@ -168,12 +169,13 @@ function graph(){
   
   visE.forEach(e=>{
     const a=e.sourceNode,b=e.targetNode,ax=view.x+a.x*view.scale,ay=view.y+a.y*view.scale,bx=view.x+b.x*view.scale,by=view.y+b.y*view.scale;
+    let opacity=1; if(window.selectedNodeId&&a.id!==window.selectedNodeId&&b.id!==window.selectedNodeId)opacity=0.15;
     ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);
     const isAssoc=!e.relationship?.startsWith('shared_');
     if(isAssoc){
-      ctx.strokeStyle='#334155'; ctx.lineWidth=1*view.scale; ctx.globalAlpha=0.6; ctx.setLineDash([]);
+      ctx.strokeStyle='#334155'; ctx.lineWidth=1*view.scale; ctx.globalAlpha=0.6*opacity; ctx.setLineDash([]);
     }else{
-      ctx.strokeStyle=nodeColor(e.priority); ctx.lineWidth=Math.max(1,e.score*6)*view.scale; ctx.globalAlpha=0.5+e.score*0.5; ctx.setLineDash([6*view.scale,6*view.scale]);
+      ctx.strokeStyle=edgeColor(e.relationship); ctx.lineWidth=Math.max(1,e.score*6)*view.scale; ctx.globalAlpha=(0.5+e.score*0.5)*opacity; ctx.setLineDash([6*view.scale,6*view.scale]);
     }
     ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]);
   });
@@ -181,8 +183,14 @@ function graph(){
   visN.forEach(n=>{
     const st=NODE_STYLES[n.type]||NODE_STYLES.other, m=q&&n.label.toLowerCase().includes(q);
     const nx=view.x+n.x*view.scale,ny=view.y+n.y*view.scale,sr=st.r*view.scale;
+    let opacity=1; 
+    if(window.selectedNodeId&&n.id!==window.selectedNodeId){
+      const connected=visE.some(e=>(e.sourceNode.id===n.id&&e.targetNode.id===window.selectedNodeId)||(e.targetNode.id===n.id&&e.sourceNode.id===window.selectedNodeId));
+      if(!connected)opacity=0.15;
+    }
+    ctx.globalAlpha=opacity;
     if(m){ctx.beginPath();ctx.arc(nx,ny,sr+8*view.scale,0,Math.PI*2);ctx.fillStyle='rgba(167,139,250,.25)';ctx.fill();}
-    ctx.beginPath();ctx.arc(nx,ny,sr+4*view.scale,0,Math.PI*2);ctx.fillStyle=st.fill;ctx.globalAlpha=0.15;ctx.fill();ctx.globalAlpha=1;
+    ctx.beginPath();ctx.arc(nx,ny,sr+4*view.scale,0,Math.PI*2);ctx.fillStyle=st.fill;ctx.globalAlpha=0.15*opacity;ctx.fill();ctx.globalAlpha=opacity;
     ctx.beginPath();ctx.arc(nx,ny,sr,0,Math.PI*2);ctx.fillStyle=st.fill;ctx.fill();
     ctx.beginPath();ctx.arc(nx,ny,sr,0,Math.PI*2);ctx.strokeStyle=st.stroke;ctx.lineWidth=2*view.scale;ctx.stroke();
     ctx.fillStyle='#fff';
@@ -198,14 +206,17 @@ function graph(){
     ctx.fillStyle='#e2eaf4';ctx.font=`600 ${11*view.scale}px Inter`;ctx.textAlign='center';
     ctx.fillText(n.label.length>20?n.label.substring(0,18)+'...':n.label,nx,ny+sr+12*view.scale);
     hits.push({n,x:nx,y:ny,r:sr});
+    ctx.globalAlpha=1;
   });
 
   visE.forEach(e=>{
     const a=e.sourceNode,b=e.targetNode,ax=view.x+a.x*view.scale,ay=view.y+a.y*view.scale,bx=view.x+b.x*view.scale,by=view.y+b.y*view.scale;
+    let opacity=1; if(window.selectedNodeId&&a.id!==window.selectedNodeId&&b.id!==window.selectedNodeId)opacity=0.15;
+    ctx.globalAlpha=opacity;
     const lbl=e.label||e.relationship;
     if(lbl){
       ctx.font=`500 ${10*view.scale}px Inter`;ctx.textAlign='center';
-      const text = (e.score > 0 && e.relationship !== 'owns' && e.relationship !== 'visited') ? `${lbl} (${e.score.toFixed(2)})` : lbl;
+      let text = lbl.replace(/Shared\s+/i, '');
       const metrics = ctx.measureText(text);
       const tw = metrics.width + 12*view.scale;
       const th = 16*view.scale;
@@ -220,6 +231,7 @@ function graph(){
       ctx.fillStyle='rgba(226,234,244,.95)';
       ctx.fillText(text,cx,cy);
     }
+    ctx.globalAlpha=1;
   });
 
   c.onmousemove=e=>{
@@ -251,7 +263,16 @@ function graph(){
   };
   c.onclick=e=>{
     const b=c.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top,h=hits.find(a=>Math.hypot(a.x-x,a.y-y)<=a.r);
-    if(h&&!dragNode){panel({name:h.n.label,type:h.n.type,priority:h.n.data?.priority||'low',evidenceDetails:h.n.data?.evidence||(h.n.data?.entity?.evidenceDetails)||{},score:h.n.data?.score||0});}
+    if(h&&!dragNode){
+      if(window.selectedNodeId === h.n.id) window.selectedNodeId = null;
+      else window.selectedNodeId = h.n.id;
+      panel({name:h.n.label,type:h.n.type,priority:h.n.data?.priority||'low',evidenceDetails:h.n.data?.evidence||(h.n.data?.entity?.evidenceDetails)||{},score:h.n.data?.score||0});
+      graph();
+    }else if(!dragNode){
+      window.selectedNodeId = null;
+      closePanel();
+      graph();
+    }
   };
   window.onmouseup=()=>{if(dragNode)releaseNode(dragNode); window.dragPan=false;};
   window.onmousemove=e=>{
