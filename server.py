@@ -317,10 +317,21 @@ def upload():
     graph_store = generate_graph(investigations_store, edges)
     
     investigation_state['entityCount'] = len(entities_store)
-    investigation_state['prioritySummary']['total'] = len(graph_store.get('edges', []))
-    investigation_state['prioritySummary']['high'] = 0
-    investigation_state['prioritySummary']['medium'] = 0
-    investigation_state['prioritySummary']['low'] = 0
+    high = medium = low = 0
+    for node in graph_store.get('nodes', []):
+        if node.get('type') == 'person':
+            p = node.get('priority', 'Low')
+            if p == 'High': high += 1
+            elif p == 'Medium': medium += 1
+            else: low += 1
+            
+    investigation_state['prioritySummary'] = {
+        'total': high + medium + low,
+        'high': high,
+        'medium': medium,
+        'low': low,
+        'topName': None
+    }
     top_pair = []
     investigation_state['prioritySummary']['topName'] = ' / '.join(top_pair) if top_pair else None
     investigation_state['extractionStatus'] = 'Completed'

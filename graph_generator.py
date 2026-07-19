@@ -18,13 +18,16 @@ def generate_graph(investigations, edges) -> dict:
             
         is_hidden = getattr(person, 'hidden', True)
         
+        score = getattr(person, 'risk_score', 0.0)
+        priority = 'High' if score >= 0.75 else 'Medium' if score >= 0.40 else 'Low'
+        
         # Person Node
         nodes.append(GraphNode(
             id=person.id,
             label=person.name,
             type='person',
-            priority='Medium' if getattr(person, 'risk_score', 0.0) >= 0.40 else 'Low',
-            score=getattr(person, 'risk_score', 0.0),
+            priority=priority,
+            score=score,
             visibilityLevel=vis_level,
             hidden=is_hidden,
             evidence={
