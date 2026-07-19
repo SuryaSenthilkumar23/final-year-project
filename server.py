@@ -257,11 +257,19 @@ def upload():
                             # Legacy dashboard state
                             counts, entities, artifacts = parse_xml_from_string(xml_bytes, source_name=name)
                             merge_counts(investigation_state['artifactCounts'], counts)
-                            artifacts_store.extend(artifacts)
+                            # artifacts_store.extend(artifacts)
                             entities_store.extend(entities)
                             
                             # New pipeline
                             raw_records = parse_raw_records(xml_bytes)
+                            for r in raw_records:
+                                artifacts_store.append({
+                                    'type': r.get('tag', 'unknown'),
+                                    'title': r.get('name') or r.get('body') or r.get('url') or 'Extracted Item',
+                                    'source': name,
+                                    'timestamp': r.get('time') or r.get('timestamp') or None,
+                                    'detail': json.dumps(r)
+                                })
                             invs = build_investigation(raw_records)
                             normalize_investigations(invs)
                             merge_investigations(investigations_store, invs)
@@ -271,11 +279,19 @@ def upload():
         # Legacy dashboard state
         counts, entities, artifacts = parse_xml_from_string(content, source_name=f.filename)
         merge_counts(investigation_state['artifactCounts'], counts)
-        artifacts_store.extend(artifacts)
+        # artifacts_store.extend(artifacts)
         entities_store.extend(entities)
         
         # New pipeline
         raw_records = parse_raw_records(content)
+        for r in raw_records:
+            artifacts_store.append({
+                'type': r.get('tag', 'unknown'),
+                'title': r.get('name') or r.get('body') or r.get('url') or 'Extracted Item',
+                'source': f.filename,
+                'timestamp': r.get('time') or r.get('timestamp') or None,
+                'detail': json.dumps(r)
+            })
         invs = build_investigation(raw_records)
         normalize_investigations(invs)
         merge_investigations(investigations_store, invs)
