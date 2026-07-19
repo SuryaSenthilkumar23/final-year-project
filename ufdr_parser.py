@@ -11,11 +11,20 @@ def parse_raw_records(xml_bytes) -> list[dict]:
     records = []
     
     for child in root:
-        if len(child) > 0:
-            record = {'tag': child.tag.lower()}
-            for sub in child:
-                if sub.text:
-                    record[sub.tag.lower()] = sub.text.strip()
+        # Some UFDR exports use attributes, some use sub-elements. We capture both.
+        record = {'tag': child.tag.lower()}
+        
+        # Capture attributes
+        for k, v in child.attrib.items():
+            record[k.lower()] = str(v).strip()
+            
+        # Capture sub-elements
+        for sub in child:
+            if sub.text:
+                record[sub.tag.lower()] = sub.text.strip()
+                
+        # If it has meaningful data (more than just the tag), append it
+        if len(record) > 1:
             records.append(record)
             
     return records
