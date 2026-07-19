@@ -27,7 +27,44 @@ function corr(){if(!S.investigation)return page('Correlation Graph','The graph d
 function rep(){return !S.investigation?page('Reports','Report generation appears here once backend support is available.',empty('No reports generated.','No investigation loaded.','<a class="btn btn-primary" href="#/upload">Upload UFDR</a>')):page('Reports','Generate, review, and download reports from backend-supported outputs only.',`<section class="content-section"><div class="report-actions" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));"><button class="btn" disabled>Generate Report</button><button class="btn" disabled>Download PDF</button></div></section>${S.reports.length?`<section class="data-panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Generated</th><th>Status</th><th>Summary</th></tr></thead><tbody>${S.reports.map(x=>`<tr><td>${esc(x.name||x.title||'Report')}</td><td>${esc(fmt(x.generatedAt||x.createdAt)||'Unavailable')}</td><td>${esc(x.status||'Available')}</td><td>${esc(x.summary||'Investigation summary')}</td></tr>`).join('')}</tbody></table></div></section>`:empty('No reports generated.','Report generation will be available after investigation processing.')}`)}
 function render(){S.route=getRoute(); updateShell(); $('#appContent').innerHTML=({dashboard:dash,upload:upload,artifacts:art,entities:ent,correlation:corr,reports:rep}[S.route])(); bind(); graph()}
 function bind(){ $('#retryBtn')?.addEventListener('click',()=>load(S.route)); $('#artifactQuery')?.addEventListener('input',e=>{S.filters.artifactQuery=e.target.value;render()}); $('#artifactType')?.addEventListener('change',e=>{S.filters.artifactType=e.target.value;render()}); $('#entityQuery')?.addEventListener('input',e=>{S.filters.entityQuery=e.target.value;render()}); $('#entityPriority')?.addEventListener('change',e=>{S.filters.entityPriority=e.target.value;render()}); $('#reloadEntities')?.addEventListener('click',()=>load('entities')); $$('.entity-row').forEach(r=>r.addEventListener('click',()=>panel(S.entities[+r.dataset.i]))); const f=$('#ufdrFile'),d=$('#dropzone'); if(f&&d){['dragenter','dragover'].forEach(n=>d.addEventListener(n,e=>{e.preventDefault();d.classList.add('dragover')})); ['dragleave','drop'].forEach(n=>d.addEventListener(n,e=>{e.preventDefault();d.classList.remove('dragover')})); d.addEventListener('drop',e=>e.dataTransfer?.files?.[0]&&send(e.dataTransfer.files[0])); f.addEventListener('change',e=>e.target.files?.[0]&&send(e.target.files[0])); $('#refreshBtn')?.addEventListener('click',async()=>{await loadInv(); if(S.investigation) location.hash='#/dashboard'})} $('#graphQuery')?.addEventListener('input',e=>{S.filters.graphQuery=e.target.value;graph()}); $('#zoomIn')?.addEventListener('click',()=>{view.scale=Math.min(2.5,view.scale+.15);graph()}); $('#zoomOut')?.addEventListener('click',()=>{view.scale=Math.max(.6,view.scale-.15);graph()}); $('#fitViewBtn')?.addEventListener('click',()=>{fitView();graph()}); $$('.entity-type-filter').forEach(cb=>cb.addEventListener('change',e=>{const s=new Set(S.filters.graphEntityTypes); if(e.target.checked)s.add(e.target.value); else s.delete(e.target.value); S.filters.graphEntityTypes=[...s]; graph()})); $('#graphMinScore')?.addEventListener('input',e=>{S.filters.graphMinScore=parseFloat(e.target.value); const lbl=$('#scoreLabel'); if(lbl)lbl.textContent=S.filters.graphMinScore.toFixed(2); graph()}); $('#graphRelType')?.addEventListener('change',e=>{S.filters.graphRelType=e.target.value; graph()})}
-function panel(x){if(!x)return; const name=x.value||x.name||'Entity'; const details=x.evidenceDetails||x.evidence||{}; const groups=Object.entries(details).map(([k,v])=>`<section class="panel-card"><div class="panel-label">${esc(k.replace(/_/g,' '))}</div><pre style="white-space:pre-wrap;color:var(--text-secondary);font:inherit;line-height:1.6;">${esc(JSON.stringify(v,null,2))}</pre></section>`).join(''); $('#panelAvatar').textContent=String(name).split(/\s+/).map(a=>a[0]).join('').slice(0,2).toUpperCase(); $('#panelEntityName').textContent=name; $('#panelEntityMeta').textContent=`${x.type||'Unknown'} | ${x.priority||'Unknown priority'}`; $('#panelBody').innerHTML=`<section class="panel-card"><div class="panel-label">Overview</div><div class="evidence-list"><div class="evidence-row"><span>Correlation Score</span><strong>${esc(x.score??x.confidence??'Unavailable')}</strong></div><div class="evidence-row"><span>Priority</span><strong>${esc(x.priority||'Unavailable')}</strong></div><div class="evidence-row"><span>Evidence Groups</span><strong>${esc(Object.keys(details).length||0)}</strong></div></div></section>${groups||`<section class="panel-card"><div class="panel-label">Evidence Details</div><pre style="white-space:pre-wrap;color:var(--text-secondary);font:inherit;line-height:1.6;">${esc(JSON.stringify(x,null,2))}</pre></section>`}`; $('#evidencePanel').classList.add('open'); $('#panelOverlay').classList.add('active'); document.body.style.overflow='hidden'}
+function panel(x){
+  if(!x)return; 
+  const name=x.value||x.name||'Entity'; 
+  const details=x.evidenceDetails||x.evidence||{}; 
+  
+  // Format score
+  let scoreVal = x.score ?? x.confidence ?? 'Unavailable';
+  if(typeof scoreVal === 'number') scoreVal = scoreVal.toFixed(2);
+  
+  // Filter empty evidence groups
+  const validDetails = Object.entries(details).filter(([k,v]) => Array.isArray(v) ? v.length > 0 : (v && Object.keys(v).length > 0));
+  
+  const groups=validDetails.map(([k,v])=>{
+    let listHtml = '';
+    if(Array.isArray(v)) {
+      const items = v.map(item => {
+        if(typeof item === 'object') {
+          return `<div style="background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:6px;margin-bottom:8px;border:1px solid var(--border);">` + 
+                 Object.entries(item).map(([ik, iv])=>`<div style="margin-bottom:4px"><strong style="color:var(--text);text-transform:capitalize">${esc(ik)}:</strong> ${esc(iv)}</div>`).join('') + 
+                 `</div>`;
+        }
+        return `<div style="padding:4px 0;display:flex;align-items:center;gap:8px;"><span style="color:var(--primary)">•</span> ${esc(item)}</div>`;
+      }).join('');
+      listHtml = `<div style="color:var(--text-secondary);font:inherit;line-height:1.6;margin-top:0.5rem">${items}</div>`;
+    } else {
+      listHtml = `<pre style="white-space:pre-wrap;color:var(--text-secondary);font:inherit;line-height:1.6;margin-top:0.5rem;background:rgba(255,255,255,0.03);padding:12px;border-radius:6px;">${esc(JSON.stringify(v,null,2))}</pre>`;
+    }
+    return `<section class="panel-card"><div class="panel-label">${esc(k.replace(/_/g,' ').toUpperCase())}</div>${listHtml}</section>`;
+  }).join('');
+  
+  $('#panelAvatar').textContent=String(name).split(/\s+/).map(a=>a[0]).join('').slice(0,2).toUpperCase(); 
+  $('#panelEntityName').textContent=name; 
+  $('#panelEntityMeta').textContent=`${x.type||'Unknown'} | ${x.priority||'Unknown priority'}`; 
+  $('#panelBody').innerHTML=`<section class="panel-card"><div class="panel-label">OVERVIEW</div><div class="evidence-list" style="margin-top:0.5rem"><div class="evidence-row"><span>Correlation Score</span><strong>${esc(scoreVal)}</strong></div><div class="evidence-row"><span>Priority</span><strong>${esc(x.priority||'Unavailable')}</strong></div><div class="evidence-row"><span>Active Evidence Categories</span><strong>${validDetails.length}</strong></div></div></section>${groups}`; 
+  $('#evidencePanel').classList.add('open'); 
+  $('#panelOverlay').classList.add('active'); 
+  document.body.style.overflow='hidden'
+}
 function closePanel(){ $('#evidencePanel').classList.remove('open'); $('#panelOverlay').classList.remove('active'); document.body.style.overflow='' }
 async function send(file){S.upload={progress:5,processing:true,message:'',error:''}; render(); const fd=new FormData(); fd.append('file',file); try{const r=await new Promise((ok,bad)=>{const x=new XMLHttpRequest(); x.open('POST',api('upload')); x.responseType='json'; x.upload.addEventListener('progress',e=>{if(e.lengthComputable){S.upload.progress=Math.max(10,Math.round(e.loaded/e.total*100)); $('#uploadBar')&&($('#uploadBar').style.width=`${S.upload.progress}%`)}}); x.onload=()=>x.status>=200&&x.status<300?ok(x.response):bad(new Error(`Upload failed with status ${x.status}`)); x.onerror=()=>bad(new Error('Network error during upload.')); x.send(fd)}); S.upload.progress=100; S.upload.message=r?.message||'The backend accepted the UFDR upload.'; S.upload.processing=false; await loadInv(); await Promise.all(['artifacts','entities','correlation','reports'].map(load)); location.hash='#/dashboard'}catch(e){S.upload.processing=false; S.upload.error=e.message||'Unable to upload the UFDR report.'; render()}}
 const edgeEnds=e=>({from:e.from||e.source,to:e.to||e.target});
